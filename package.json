@@ -1,0 +1,19 @@
+{
+  "name": "splitseezs-backend-api",
+  "version": "1.0.0",
+  "description": "This is the backend api for splitseezs",
+  "main": "server.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "start": "node server.js",
+    "dev": "nodemon server.js"
+  },
+  "author": "Kirthika",
+  "license": "MIT",
+  "dependencies": {
+    "express": "^5.1.0"
+  },
+  "devDependencies": {
+    "nodemon": "^3.1.10"
+  }
+}
