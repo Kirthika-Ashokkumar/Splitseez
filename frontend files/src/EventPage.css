@@ -1,0 +1,167 @@
+body {
+  font-family: Arial, sans-serif;
+  background-color: #f8f9fb;
+  margin: 0;
+  padding: 0;
+}
+
+.container {
+  max-width: 500px;
+  margin: 40px auto;
+  padding: 25px;
+  background: white;
+  border-radius: 12px;
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+}
+
+h2 {
+  text-align: center;
+  color: #333;
+  margin-bottom: 20px;
+}
+
+/* Form structure */
+.form-group {
+  display: flex;
+  flex-direction: column;
+  margin-bottom: 16px;
+}
+
+label {
+  font-weight: bold;
+  margin-bottom: 6px;
+  color: #555;
+}
+
+/* Input fields */
+input[type="text"],
+input[type="number"],
+select,
+input[type="file"] {
+  padding: 10px;
+  border: 1px solid #ccc;
+  border-radius: 6px;
+  font-size: 15px;
+  width: 100%;
+}
+
+input[type="text"]:focus,
+input[type="number"]:focus,
+select:focus {
+  outline: none;
+  border-color: #007bff;
+  box-shadow: 0 0 4px rgba(0, 123, 255, 0.3);
+}
+
+/* Add participant input + button */
+.participants {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+/* Buttons */
+button {
+  padding: 10px 14px;
+  font-size: 15px;
+  border: none;
+  border-radius: 6px;
+  background-color: #007bff;
+  color: white;
+  cursor: pointer;
+  transition: 0.3s ease;
+}
+
+button:hover {
+  background-color: #0056b3;
+}
+
+.discard {
+  background-color: #e74c3c;
+}
+
+.discard:hover {
+  background-color: #c0392b;
+}
+
+.button-group {
+  display: flex;
+  justify-content: space-between;
+  margin-top: 20px;
+}
+
+/* Description + Date Boxes */
+.description-box,
+.date-box {
+  border: 1px solid #ccc;
+  padding: 10px;
+  border-radius: 8px;
+  background: #f9f9f9;
+  margin-bottom: 15px;
+}
+
+.description-box input,
+.date-box input {
+  border: 1px solid #aaa;
+  border-radius: 6px;
+  padding: 8px;
+  font-size: 15px;
+  width: 100%;
+}
+
+/* Participants dropdown */
+.participant-dropdown {
+  margin-top: 10px;
+  display: flex;
+  flex-direction: column;
+}
+
+.participant-dropdown label {
+  font-weight: bold;
+  margin-bottom: 6px;
+  color: #444;
+}
+
+.participant-dropdown select {
+  padding: 10px;
+  border: 1px solid #ccc;
+  border-radius: 6px;
+  background-color: #fff;
+  font-size: 15px;
+  cursor: pointer;
+  appearance: none; /* Hide default arrow */
+  background-image: url("data:image/svg+xml;utf8,<svg fill='gray' height='20' viewBox='0 0 20 20' width='20' xmlns='http://www.w3.org/2000/svg'><path d='M5.516 7.548l4.484 4.484 4.484-4.484a.75.75 0 011.06 1.06l-5 5a.75.75 0 01-1.06 0l-5-5a.75.75 0 111.06-1.06z'/></svg>");
+  background-repeat: no-repeat;
+  background-position-x: 98%;
+  background-position-y: center;
+}
+
+.participant-dropdown select:focus {
+  border-color: #007bff;
+}
+
+/* Split sections */
+.split-section {
+  margin-top: 15px;
+  padding: 10px;
+  border: 1px solid #ddd;
+  border-radius: 8px;
+  background-color: #f9f9f9;
+}
+
+.item-entry {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 10px;
+}
+
+.item-entry input {
+  flex: 1;
+}
+.discard {
+  background-color: #e74c3c;
+}
+
+.discard:hover {
+  background-color: #c0392b;
+}
