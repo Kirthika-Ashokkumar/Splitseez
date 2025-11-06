@@ -11,7 +11,7 @@ function LoginPage() {
   const handleLogin = async (e) => {
     e.preventDefault();
 
-    const response = await fetch("http://localhost:5000/Users/Signin", {
+    const response = await fetch("http://localhost:4000/Users/Signin", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ email, password }),
@@ -56,6 +56,12 @@ function LoginPage() {
 
           <button type="submit" className="btn">Login</button>
         </form>
+        <div className="signup-link">
+          <p>Don't have an account?</p>
+          <button className="signup-btn" onClick={() => navigate("/signup")}>
+            Create an Account
+          </button>
+        </div>
       </div>
     </div>
   );
