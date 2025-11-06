@@ -56,6 +56,12 @@ function LoginPage() {
 
           <button type="submit" className="btn">Login</button>
         </form>
+        <div className="signup-link">
+          <p>Don't have an account?</p>
+          <button className="signup-btn" onClick={() => navigate("/signup")}>
+            Create an Account
+          </button>
+        </div>
       </div>
     </div>
   );
