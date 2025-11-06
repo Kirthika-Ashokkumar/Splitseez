@@ -2,9 +2,10 @@ const bcrypt = require('bcryptjs');
 const crypto = require('crypto');
 const User = require('../models/user');
 
+const JWT_SECRET = process.env.JWT_SECRET || 'supersecretkey';
+const JWT_EXPIRATION = '2h';
 
-const PHONE_KEY_BASE64 =
-    process.env.PHONE_ENC_KEY || ''; 
+const PHONE_KEY_BASE64 = process.env.PHONE_ENC_KEY || ''; 
 let PHONE_KEY_BUFFER = null;
 if (PHONE_KEY_BASE64) {
   PHONE_KEY_BUFFER = Buffer.from(PHONE_KEY_BASE64, 'base64');
@@ -100,7 +101,6 @@ const signUp = async (req, res) => {
 
     await newUser.save();
 
-    // Return safe response (do NOT include hashed password or raw phone)
     return res.status(201).json({
       message: 'User created successfully',
       user: {
@@ -118,19 +118,25 @@ const signUp = async (req, res) => {
 
 const signIn = async (req, res) => {
   try {
-    let {email, password} = req.body ?? {};
+    let { email, password } = req.body ?? {};
     if (!email || !password)
-      return res.status(400).json({error: 'Email and password are required.'});
+      return res.status(400).json({ error: 'Email and password are required.' });
 
     email = email.toLowerCase().trim();
     password = password.trim();
 
-    const user = await User.findOne({email});
-    if (!user)
-      return res.status(401).json({error: 'Invalid email or password.'});
+    const user = await User.findOne({ email });
+    if (!user) return res.status(401).json({ error: 'Invalid email or password.' });
+
     const passwordMatch = await bcrypt.compare(password, user.password);
-    if (!passwordMatch)
-      return res.status(401).json({error: 'Invalid email or password.'});
+    if (!passwordMatch) return res.status(401).json({ error: 'Invalid email or password.' });
+
+    const token = jwt.sign({ id: user._id, email: user.email }, JWT_SECRET, {
+      expiresIn: JWT_EXPIRATION,
+    });
+
+    user.token = token;
+    await user.save();
 
     return res.status(200).json({
       message: 'Sign-in successful',
@@ -138,18 +144,38 @@ const signIn = async (req, res) => {
         id: user._id,
         name: user.name,
         email: user.email,
-        username: user.username
-      }
+      },
+      token,
     });
   } catch (err) {
     console.error('signIn error:', err);
-    return res.status(500).json({error: 'Server error'});
+    return res.status(500).json({ error: 'Server error' });
+  }
+};
+
+const logout = async (req, res) => {
+  try {
+    const token = req.headers.authorization?.split(' ')[1];
+    if (!token) return res.status(400).json({ error: 'Token required.' });
+
+    const decoded = jwt.verify(token, JWT_SECRET);
+    const user = await User.findById(decoded.id);
+    if (!user) return res.status(404).json({ error: 'User not found.' });
+
+    user.token = null;
+    await user.save();
+
+    return res.status(200).json({ message: 'Logout successful.' });
+  } catch (err) {
+    console.error('logout error:', err);
+    return res.status(401).json({ error: 'Invalid or expired token.' });
   }
 };
 
 module.exports = {
   signIn,
   signUp,
+  logout,
   encryptPhone,
   decryptPhone
 };
