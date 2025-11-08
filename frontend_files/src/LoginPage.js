@@ -19,11 +19,13 @@ function LoginPage() {
 
     const data = await response.json();
 
-    if (data.success) {
+   if (response.ok && data.token) {
+      // Save token for authenticated requests
+      localStorage.setItem("token", data.token);
       alert("Login successful!");
       navigate("/dashboard");
     } else {
-      alert("Invalid email or password");
+      alert(data.message || "Invalid email or password");
     }
   };
 
@@ -68,3 +70,4 @@ function LoginPage() {
 }
 
 export default LoginPage;
+
