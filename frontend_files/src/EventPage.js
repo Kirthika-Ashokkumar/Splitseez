@@ -1,26 +1,38 @@
 import React, { useState } from "react";
 import "./EventPage.css";
 
+const API_BASE = "http://localhost:4000"; 
+
 function EventPage() {
   const [participants, setParticipants] = useState([]);
   const [newParticipant, setNewParticipant] = useState("");
+
   const [splitType, setSplitType] = useState("equal");
   const [amount, setAmount] = useState(0);
   const [description, setDescription] = useState("");
   const [date, setDate] = useState("");
+
   const [percentages, setPercentages] = useState({});
   const [items, setItems] = useState([{ name: "", user: "", amount: "" }]);
 
+  //receipt and tax/tip (optional)
+  const [receiptFile, setReceiptFile] = useState(null);
+  const [tax, setTax] = useState("");
+  const [tip, setTip] = useState("");
+
   // Add participant
   const handleAddParticipant = () => {
-    if (newParticipant.trim() !== "") {
-      setParticipants([...participants, newParticipant]);
-      setNewParticipant("");
-      //setShowDropdown(true);
+    const name = newParticipant.trim();
+    if (!name) return;
+    if (participants.includes(name)) {
+      alert("Participant already added.");
+      return;
     }
+    setParticipants([...participants, name]);
+    setNewParticipant("");
   };
 
-  // Handle percentage and item changes
+  // Percentage & Item handlers
   const handlePercentageChange = (participant, value) => {
     setPercentages({ ...percentages, [participant]: value });
   };
@@ -30,49 +42,105 @@ function EventPage() {
   };
 
   const handleItemChange = (index, field, value) => {
-    const updatedItems = [...items];
-    updatedItems[index][field] = value;
-    setItems(updatedItems);
+    const updated = [...items];
+    updated[index][field] = value;
+    setItems(updated);
   };
 
- // Save event
-const handleSaveEvent = async () => {
-  const eventData = {
-    description,
-    date,
-    amount,
-    participants,
-    splitType,
-    percentages,
-    items,
+  // Optional receipt file change
+  const handleReceiptChange = (e) => {
+    const file = e.target.files?.[0];
+    setReceiptFile(file || null);
   };
 
-  try {
-    const response = await fetch("http://localhost:4000/Events/Add", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(eventData),
-    });
+  // Save event(POST /Event (JWT)). If receipt selected, POST /Receipt (multipart + JWT)
+  const handleSaveEvent = async () => {
+    const token = localStorage.getItem("token");
+    if (!token) {
+      alert("You must be logged in. Missing token.");
+      return;
+    }
 
-    if (response.ok) alert("Event saved successfully!");
-    else alert("Failed to save event.");
-  } catch (err) {
-    console.error(err);
-    alert("Could not connect to backend server.");
-  }
-};
+    // minimal checks
+    if (!description.trim()) return alert("Please add a description.");
+    if (!date.trim()) return alert("Please add a date (mm/dd/yyyy).");
+    if (participants.length === 0) return alert("Please add at least one participant.");
 
-// Discard event
-const handleDiscard = () => {
-  setDescription("");
-  setDate("");
-  setAmount(0);
-  setParticipants([]);
-  setNewParticipant("");
-  setPercentages({});
-  setItems([{ name: "", user: "", amount: "" }]);
-  alert("Event discarded!");
-};
+    try {
+      //Create the event
+      const eventPayload = {
+        title: description,
+        date: date ? new Date(date).toISOString() : undefined,
+        //map names/emails with userIds
+        participants,
+      };
+
+      const createRes = await fetch(`${API_BASE}/Event`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify(eventPayload),
+      });
+
+      if (!createRes.ok) {
+        const text = await createRes.text();
+        console.error("Create Event failed:", createRes.status, text);
+        alert("Failed to save event.");
+        return;
+      }
+
+      const created = await createRes.json();
+      const eventId = created?.event?._id || created?.event?.id || created?._id || created?.id;
+
+      //upload receipt image (optional)
+      if (receiptFile && eventId) {
+        const formData = new FormData();
+        formData.append("receiptImage", receiptFile);      
+        formData.append("event", eventId);                  
+        if (tax !== "") formData.append("tax", String(tax));
+        if (tip !== "") formData.append("tip", String(tip));
+
+        const receiptRes = await fetch(`${API_BASE}/Receipt`, {
+          method: "POST",
+          headers: {
+            Authorization: `Bearer ${token}`, 
+          },
+          body: formData,
+        });
+
+        if (!receiptRes.ok) {
+          const text = await receiptRes.text();
+          console.error("Receipt upload failed:", receiptRes.status, text);
+          alert("Event saved, but receipt upload failed.");
+        } else {
+          alert("Event and receipt uploaded successfully!");
+        }
+      } else {
+        // No receipt selected
+        alert("Event saved successfully!");
+      }
+    } catch (err) {
+      console.error(err);
+      alert("Could not connect to backend server.");
+    }
+  };
+
+  // Discard event
+  const handleDiscard = () => {
+    if (!window.confirm("Discard all changes?")) return;
+    setDescription("");
+    setDate("");
+    setAmount(0);
+    setParticipants([]);
+    setNewParticipant("");
+    setPercentages({});
+    setItems([{ name: "", user: "", amount: "" }]);
+    setReceiptFile(null);
+    setTax("");
+    setTip("");
+  };
 
   return (
     <div className="event-container">
@@ -119,34 +187,32 @@ const handleDiscard = () => {
 
         {/* Participants */}
         <div className="form-group participants">
-  <label htmlFor="participants">Add Participants:</label>
-  <input
-    type="text"
-    id="participants"
-    placeholder="Enter participant name"
-    value={newParticipant}
-    onChange={(e) => setNewParticipant(e.target.value)}
-  />
-  <button type="button" onClick={handleAddParticipant}>
-    Add
-  </button>
-</div>
+          <label htmlFor="participants">Add Participants:</label>
+          <input
+            type="text"
+            id="participants"
+            placeholder="Enter participant name"
+            value={newParticipant}
+            onChange={(e) => setNewParticipant(e.target.value)}
+          />
+          <button type="button" onClick={handleAddParticipant}>
+            Add
+          </button>
+        </div>
 
-{/* Dropdown for participants */}
-{participants.length > 0 && (
-  <div className="participant-dropdown">
-    <label>Participants List:</label>
-    <select id="participantDropdown">
-      {participants.map((p, i) => (
-        <option key={i}>{p}</option>
-      ))}
-    </select>
-  </div>
-)}
+        {/* Dropdown for participants */}
+        {participants.length > 0 && (
+          <div className="participant-dropdown">
+            <label>Participants List:</label>
+            <select id="participantDropdown">
+              {participants.map((p, i) => (
+                <option key={i}>{p}</option>
+              ))}
+            </select>
+          </div>
+        )}
 
-        
-
-        {/* Split selection */}
+        {/* Split Type*/}
         <div className="form-group">
           <label htmlFor="splitType">Split Type:</label>
           <select
@@ -160,7 +226,7 @@ const handleDiscard = () => {
           </select>
         </div>
 
-        {/* Split Equally */}
+        {/* Equal Split preview */}
         {splitType === "equal" && participants.length > 0 && (
           <div className="split-section">
             <h4>Split Equally:</h4>
@@ -172,7 +238,7 @@ const handleDiscard = () => {
           </div>
         )}
 
-        {/* Split by Percentage */}
+        {/* Percentage inputs*/}
         {splitType === "percentage" && participants.length > 0 && (
           <div className="split-section">
             <h4>Split by Percentage:</h4>
@@ -190,8 +256,7 @@ const handleDiscard = () => {
                 <span>
                   {percentages[p]
                     ? ` = $${(
-                        (Number(percentages[p]) / 100) *
-                        amount
+                        (Number(percentages[p]) / 100) * Number(amount || 0)
                       ).toFixed(2)}`
                     : ""}
                 </span>
@@ -200,7 +265,7 @@ const handleDiscard = () => {
           </div>
         )}
 
-        {/* Itemized Split */}
+        {/* Itemized inputs*/}
         {splitType === "itemize" && (
           <div className="split-section">
             <h4>Itemized Split:</h4>
@@ -210,25 +275,19 @@ const handleDiscard = () => {
                   type="text"
                   placeholder="Item name"
                   value={item.name}
-                  onChange={(e) =>
-                    handleItemChange(index, "name", e.target.value)
-                  }
+                  onChange={(e) => handleItemChange(index, "name", e.target.value)}
                 />
                 <input
                   type="text"
                   placeholder="User"
                   value={item.user}
-                  onChange={(e) =>
-                    handleItemChange(index, "user", e.target.value)
-                  }
+                  onChange={(e) => handleItemChange(index, "user", e.target.value)}
                 />
                 <input
                   type="number"
                   placeholder="Amount ($)"
                   value={item.amount}
-                  onChange={(e) =>
-                    handleItemChange(index, "amount", e.target.value)
-                  }
+                  onChange={(e) => handleItemChange(index, "amount", e.target.value)}
                 />
               </div>
             ))}
@@ -238,21 +297,55 @@ const handleDiscard = () => {
           </div>
         )}
 
-        {/* Save Button */}
-<div className="button-group">
-  <button id="saveBtn" onClick={handleSaveEvent}>
-    Save
-  </button>
-  <button id="discardBtn" className="discard" onClick={handleDiscard}>
-    Discard
-  </button>
-</div>
-</div>
-</div>
-);
+        {/* NEW: Optional Receipt Upload + Tax/Tip */}
+        <div className="form-group">
+          <label>Receipt (optional):</label>
+          <input
+            type="file"
+            accept="image/*"
+            capture="environment"
+            onChange={handleReceiptChange}
+          />
+        </div>
+
+        <div className="form-group">
+          <label htmlFor="tax">Tax (optional):</label>
+          <input
+            type="number"
+            id="tax"
+            placeholder="0.00"
+            min="0"
+            step="0.01"
+            value={tax}
+            onChange={(e) => setTax(e.target.value)}
+          />
+        </div>
+
+        <div className="form-group">
+          <label htmlFor="tip">Tip (optional):</label>
+          <input
+            type="number"
+            id="tip"
+            placeholder="0.00"
+            min="0"
+            step="0.01"
+            value={tip}
+            onChange={(e) => setTip(e.target.value)}
+          />
+        </div>
+
+        {/* Actions */}
+        <div className="button-group">
+          <button id="saveBtn" onClick={handleSaveEvent}>
+            Save
+          </button>
+          <button id="discardBtn" className="discard" onClick={handleDiscard}>
+            Discard
+          </button>
+        </div>
+      </div>
+    </div>
+  );
 }
 
 export default EventPage;
-
-
-
