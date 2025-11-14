@@ -1,50 +1,54 @@
 const bcrypt = require('bcryptjs');
 const crypto = require('crypto');
 const User = require('../models/user');
+const jwt = require('jsonwebtoken');
+
 
 const JWT_SECRET = process.env.JWT_SECRET || 'supersecretkey';
 const JWT_EXPIRATION = '2h';
 
-const PHONE_KEY_BASE64 = process.env.PHONE_ENC_KEY || ''; 
-let PHONE_KEY_BUFFER = null;
-if (PHONE_KEY_BASE64) {
-  PHONE_KEY_BUFFER = Buffer.from(PHONE_KEY_BASE64, 'base64');
-  if (PHONE_KEY_BUFFER.length !== 32) {
-    console.warn(
-        'PHONE_ENC_KEY is not 32 bytes after base64 decode — phone encryption will not be used.');
-    PHONE_KEY_BUFFER = null;
-  }
-}
 
-// AES-GCM encryption helpers (reversible)
-function encryptPhone(plainText) {
-  if (!PHONE_KEY_BUFFER) return null;
-  // Generate a random 12-byte IV
-  const iv = crypto.randomBytes(12);
-  const cipher = crypto.createCipheriv('aes-256-gcm', PHONE_KEY_BUFFER, iv);
-  const encrypted =
-      Buffer.concat([cipher.update(plainText, 'utf8'), cipher.final()]);
-  const tag = cipher.getAuthTag();
-  return Buffer.concat([iv, tag, encrypted]).toString('base64');
-}
 
-function decryptPhone(encBase64) {
-  if (!PHONE_KEY_BUFFER) return null;
-  const data = Buffer.from(encBase64, 'base64');
-  const iv = data.slice(0, 12);
-  const tag = data.slice(12, 28);
-  const encrypted = data.slice(28);
-  const decipher = crypto.createDecipheriv('aes-256-gcm', PHONE_KEY_BUFFER, iv);
-  decipher.setAuthTag(tag);
-  const decrypted =
-      Buffer.concat([decipher.update(encrypted), decipher.final()]);
-  return decrypted.toString('utf8');
-}
+// const PHONE_KEY_BASE64 = process.env.PHONE_ENC_KEY || ''; 
+// let PHONE_KEY_BUFFER = null;
+// if (PHONE_KEY_BASE64) {
+//   PHONE_KEY_BUFFER = Buffer.from(PHONE_KEY_BASE64, 'base64');
+//   if (PHONE_KEY_BUFFER.length !== 32) {
+//     console.warn(
+//         'PHONE_ENC_KEY is not 32 bytes after base64 decode — phone encryption will not be used.');
+//     PHONE_KEY_BUFFER = null;
+//   }
+// }
+
+// // AES-GCM encryption helpers (reversible)
+// function encryptPhone(plainText) {
+//   if (!PHONE_KEY_BUFFER) return null;
+//   // Generate a random 12-byte IV
+//   const iv = crypto.randomBytes(12);
+//   const cipher = crypto.createCipheriv('aes-256-gcm', PHONE_KEY_BUFFER, iv);
+//   const encrypted =
+//       Buffer.concat([cipher.update(plainText, 'utf8'), cipher.final()]);
+//   const tag = cipher.getAuthTag();
+//   return Buffer.concat([iv, tag, encrypted]).toString('base64');
+// }
+
+// function decryptPhone(encBase64) {
+//   if (!PHONE_KEY_BUFFER) return null;
+//   const data = Buffer.from(encBase64, 'base64');
+//   const iv = data.slice(0, 12);
+//   const tag = data.slice(12, 28);
+//   const encrypted = data.slice(28);
+//   const decipher = crypto.createDecipheriv('aes-256-gcm', PHONE_KEY_BUFFER, iv);
+//   decipher.setAuthTag(tag);
+//   const decrypted =
+//       Buffer.concat([decipher.update(encrypted), decipher.final()]);
+//   return decrypted.toString('utf8');
+// }
 
 
 const signUp = async (req, res) => {
   try {
-    let {name, email, password, phone} = req.body ?? {};
+    let {name, email, password} = req.body ?? {};
 
     // Basic validation
     if (!name || !email || !password) {
@@ -65,38 +69,36 @@ const signUp = async (req, res) => {
           {error: 'A user with that email already exists.'});
     }
 
-    if (phone) {
-      const phoneNormalized = phone.replace(/\D/g, ''); 
-      const phoneHash =
-          crypto.createHash('sha256').update(phoneNormalized).digest('hex');
-      const existingPhone = await User.findOne({phoneHash});
-      if (existingPhone) {
-        return res.status(409).json(
-            {error: 'A user with that phone number already exists.'});
-      }
+    // if (phone) {
+    //   const phoneNormalized = phone.replace(/\D/g, ''); 
+    //   const phoneHash =
+    //       crypto.createHash('sha256').update(phoneNormalized).digest('hex');
+    //   const existingPhone = await User.findOne({phoneHash});
+    //   if (existingPhone) {
+    //     return res.status(409).json(
+    //         {error: 'A user with that phone number already exists.'});
+    //   }
 
-      req.body._phoneHash = phoneHash;
-    }
+    //   req.body._phoneHash = phoneHash;
+    // }
 
     // Hash the password with bcrypt (recommended)
     const saltRounds = 12;  // 10-12 is common. higher = slower but stronger.
     const hashedPassword = await bcrypt.hash(password, saltRounds);
 
-    let encryptedPhone = null;
-    let phoneHashToSave = req.body._phoneHash || null;
-    if (phone) {
-      const phoneNormalized = phone.trim();
-      encryptedPhone =
-          PHONE_KEY_BUFFER ? encryptPhone(phoneNormalized) : phoneNormalized;
-    }
+    // let encryptedPhone = null;
+    // let phoneHashToSave = req.body._phoneHash || null;
+    // if (phone) {
+    //   const phoneNormalized = phone.trim();
+    //   encryptedPhone =
+    //       PHONE_KEY_BUFFER ? encryptPhone(phoneNormalized) : phoneNormalized;
+    // }
 
     // Create user object and save
     const newUser = new User({
       name,
       email,
       password: hashedPassword,   
-      phone: encryptedPhone,     
-      phoneHash: phoneHashToSave 
     });
 
     await newUser.save();
@@ -176,6 +178,4 @@ module.exports = {
   signIn,
   signUp,
   logout,
-  encryptPhone,
-  decryptPhone
 };
