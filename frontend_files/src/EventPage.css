@@ -1,8 +1,14 @@
+/* Page base */
 body {
   font-family: Arial, sans-serif;
   background-color: #f8f9fb;
   margin: 0;
   padding: 0;
+}
+
+/* Optional wrapper for Event/Receipt pages */
+.event-container {
+  padding: 20px 0;
 }
 
 .container {
@@ -43,6 +49,7 @@ input[type="file"] {
   border-radius: 6px;
   font-size: 15px;
   width: 100%;
+  box-sizing: border-box;
 }
 
 input[type="text"]:focus,
@@ -53,6 +60,12 @@ select:focus {
   box-shadow: 0 0 4px rgba(0, 123, 255, 0.3);
 }
 
+/* helper text under inputs */
+small {
+  font-size: 12px;
+  color: #666;
+}
+
 /* Add participant input + button */
 .participants {
   display: flex;
@@ -60,7 +73,7 @@ select:focus {
   align-items: center;
 }
 
-/* Buttons */
+/* Buttons (base) */
 button {
   padding: 10px 14px;
   font-size: 15px;
@@ -76,6 +89,7 @@ button:hover {
   background-color: #0056b3;
 }
 
+/* Discard button */
 .discard {
   background-color: #e74c3c;
 }
@@ -84,10 +98,16 @@ button:hover {
   background-color: #c0392b;
 }
 
+/* Button group: Save / Upload Receipt / Discard */
 .button-group {
   display: flex;
-  justify-content: space-between;
+  gap: 15px;          /* space between buttons */
+  justify-content: center;
   margin-top: 20px;
+}
+
+.button-group button {
+  padding: 10px 20px;
 }
 
 /* Description + Date Boxes */
@@ -140,7 +160,7 @@ button:hover {
   border-color: #007bff;
 }
 
-/* Split sections */
+/* Split sections (used on both Event and Receipt pages) */
 .split-section {
   margin-top: 15px;
   padding: 10px;
@@ -158,10 +178,37 @@ button:hover {
 .item-entry input {
   flex: 1;
 }
-.discard {
-  background-color: #e74c3c;
+
+/* Per-item participant selection row (dropdowns side by side) */
+.item-participant-row {
+  display: flex;
+  flex-direction: row;
+  gap: 12px;
+  margin-top: 8px;
+  flex-wrap: wrap;  /* wrap if too many participants */
 }
 
-.discard:hover {
-  background-color: #c0392b;
+.item-participant-cell {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+}
+
+.item-participant-cell label {
+  font-size: 12px;
+  margin-bottom: 2px;
+}
+
+.item-participant-cell select {
+  padding: 4px 6px;
+  font-size: 13px;
+}
+
+
+.itemized-summary {
+  margin-top: 12px;
+}
+
+.itemized-summary h4 {
+  margin-bottom: 6px;
 }
