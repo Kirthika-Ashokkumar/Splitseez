@@ -1,25 +1,29 @@
 const express = require("express");
 const router = express.Router();
+const verifyToken = require('../middleware/authMiddleware');
 const {
   signUp,
   signIn,
   logout,
   getUserFromToken,
   getCreatedEvents,
-  getParticipatingEvents
+  getParticipatingEvents,
+  validateUsersByEmails
 } = require("../controllers/usersController");
 
-// Sign Up
-router.route("/Users/Signup").post(signUp);
-// Sign In
-router.route("/Users/Signin").post(signIn);
-// Logout
-router.route("/Users/Logout").post(logout);
-// Get current user info from token
-router.route("/Users/Me").get(getUserFromToken);
-// Get only created events
-router.route("/Users/CreatedEvents").get(getCreatedEvents);
-// Get only participating events
-router.route("/Users/ParticipatingEvents").get(getParticipatingEvents);
+// Sign Up (no auth needed)
+router.post("/Users/Signup", signUp);
+// Sign In (no auth needed)
+router.post("/Users/Signin", signIn);
+// Logout (needs auth)
+router.post("/Users/Logout", verifyToken, logout);
+// Get current user info from token (needs auth)
+router.get("/Users/Me", verifyToken, getUserFromToken);
+// Get only created events (needs auth)
+router.get("/Users/CreatedEvents", verifyToken, getCreatedEvents);
+// Get only participating events (needs auth)
+router.get("/Users/ParticipatingEvents", verifyToken, getParticipatingEvents);
+// Validate users by emails (needs auth)
+router.post("/Users/ValidateEmails", verifyToken, validateUsersByEmails);
 
 module.exports = router;

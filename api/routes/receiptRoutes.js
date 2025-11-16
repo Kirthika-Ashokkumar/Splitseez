@@ -6,7 +6,8 @@ const {
   updateReceipt,
   deleteReceipt,
   getReceipt,
-  getOwedList
+  getOwedList,
+  markPaid
 } = require('../controllers/receiptController');
 
 // Create a new receipt
@@ -19,6 +20,9 @@ router.delete('/Receipt/:receiptId', verifyToken, deleteReceipt);
 router.get('/Receipt/:receiptId', verifyToken, getReceipt);
 // Get only the owed list with user names
 router.get('/Receipt/:receiptId/owed', verifyToken, getOwedList);
+// Mark a specific user's owed amount as paid/unpaid
+router.put('/Receipt/:receiptId/:userId/paid', verifyToken, markPaid);
+
 
 module.exports = router;
 

@@ -1,110 +1,150 @@
+/* ---- Global ---- */
 * {
-    margin: 0;
-    padding: 0;
-    box-sizing: border-box;
-    font-family: "Poppins", sans-serif;
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
 }
 
 body {
-    background: linear-gradient(135deg, #caa2f5, #99bbf7);
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    height: 100vh;
+  font-family: "Poppins", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  background: linear-gradient(135deg, #caa2f5, #99bbf7);
+  margin: 0;
+  padding: 0;
+  min-height: 100vh;
 }
 
-.container {
-    width: 100%;
-    max-width: 400px;
-    background: #fff;
-    border-radius: 16px;
-    box-shadow: 0 8px 20px rgba(0, 0, 0, 0.2);
-    overflow: hidden;
-    padding: 2rem;
+/* ---- Login Container ---- */
+.login-container {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  min-height: 100vh;
+  width: 100%;
+  padding: 1rem;
+  gap: 2rem;
 }
 
-h2 {
-    text-align: center;
-    color: #333;
-    margin-bottom: 1.5rem;
+/* ---- Login Header/Branding ---- */
+.login-header {
+  text-align: center;
+  margin-bottom: 1rem;
 }
 
+.login-header h1 {
+  font-size: 2.5rem;
+  font-weight: 700;
+  color: white;
+  text-shadow: 0 2px 10px rgba(0, 0, 0, 0.2);
+  margin: 0;
+  letter-spacing: -0.5px;
+}
+
+/* ---- Login Card Layer ---- */
+.login-box {
+  background: rgba(255, 255, 255, 0.95);
+  border-radius: 16px;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.15);
+  padding: 2rem;
+  width: 100%;
+  max-width: 360px;
+  text-align: center;
+}
+
+/* ---- Title ---- */
+.login-box h2 {
+  font-size: 1.7rem;
+  font-weight: 700;
+  color: #333;
+  margin-bottom: 1.5rem;
+}
+
+/* ---- Input Groups ---- */
 .input-group {
-    margin-bottom: 1rem;
+  margin-bottom: 1rem;
+  text-align: left;
 }
 
 label {
-    display: block;
-    font-size: 0.9rem;
-    color: #555;
-    margin-bottom: 0.3rem;
+  font-size: 0.85rem;
+  font-weight: 600;
+  margin-bottom: 0.3rem;
+  display: block;
+  color: #333;
 }
 
 input {
-    width: 100%;
-    padding: 0.6rem;
-    border: 1px solid #ccc;
-    border-radius: 8px;
-    outline: none;
-    transition: 0.3s;
+  width: 100%;
+  padding: 0.65rem;
+  border: 1.5px solid #ddd;
+  border-radius: 8px;
+  font-size: 0.95rem;
+  transition: all 0.2s ease;
 }
 
 input:focus {
-    border-color: #2575fc;
+  border-color: #8578f5;
+  box-shadow: 0 0 0 3px rgba(133, 120, 245, 0.2);
+  outline: none;
 }
 
+/* ---- Buttons ---- */
 .btn {
-    width: 100%;
-    padding: 0.8rem;
-    border: none;
-    background-color: #85aef5;
-    color: white;
-    font-weight: 600;
-    border-radius: 8px;
-    cursor: pointer;
-    transition: 0.3s;
+  width: 100%;
+  padding: 0.75rem;
+  margin-top: 0.5rem;
+  background-color: #8578f5;
+  color: white;
+  font-weight: 600;
+  border-radius: 8px;
+  border: none;
+  cursor: pointer;
+  transition: all 0.2s ease;
 }
 
 .btn:hover {
-    background-color: #1e63d6;
-}
-
-.links, .switch {
-    text-align: center;
-    margin-top: 1rem;
-}
-
-a {
-    color: #2575fc;
-    text-decoration: none;
-    font-weight: 500;
-}
-
-a:hover {
-    text-decoration: underline;
-}
-
-.hidden {
-    display: none;
-}
-.signup-link {
-  text-align: center;
-  margin-top: 1rem;
+  background-color: #6b5de0;
 }
 
 .signup-btn {
-  margin-top: 8px;
   width: 100%;
-  padding: 0.7rem;
-  border: none;
+  padding: 0.75rem;
+  margin-top: 0.5rem;
   background-color: #3336c4;
   color: white;
   font-weight: 600;
   border-radius: 8px;
   cursor: pointer;
-  transition: 0.3s;
+  transition: all 0.2s ease;
 }
 
 .signup-btn:hover {
   background-color: #2a27c4;
+}
+
+/* ---- Links ---- */
+.links, .switch, .signup-link {
+  margin-top: 1rem;
+  font-size: 0.9rem;
+}
+
+a {
+  color: #4c73e3;
+  text-decoration: none;
+}
+
+a:hover {
+  text-decoration: underline;
+}
+
+/* ---- Responsive ---- */
+@media (max-width: 480px) {
+  .login-box {
+    max-width: 90%;
+    padding: 1.5rem;
+  }
+
+  .login-box h2 {
+    font-size: 1.5rem;
+  }
 }

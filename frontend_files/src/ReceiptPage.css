@@ -1,0 +1,450 @@
+/* Receipt Page Styles - Cohesive with Dashboard */
+.receipt-container {
+  min-height: 100vh;
+  width: 100%;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  padding: 2rem 0;
+  display: flex;
+  justify-content: center;
+  align-items: flex-start;
+  font-family: "Poppins", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+}
+
+.receipt-container .container {
+  width: 100%;
+  max-width: 700px;
+  margin: 2rem auto;
+  padding: 2.5rem;
+  background: rgba(255, 255, 255, 0.98);
+  backdrop-filter: blur(10px);
+  border-radius: 16px;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.5);
+}
+
+.receipt-container h2 {
+  text-align: center;
+  color: #333;
+  margin-bottom: 2rem;
+  font-size: 1.75rem;
+  font-weight: 700;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+/* Form structure */
+.receipt-container .form-group {
+  display: flex;
+  flex-direction: column;
+  margin-bottom: 1.25rem;
+}
+
+.receipt-container label {
+  font-weight: 600;
+  margin-bottom: 0.5rem;
+  color: #555;
+  font-size: 0.95rem;
+}
+
+/* Input fields */
+.receipt-container input[type="text"],
+.receipt-container input[type="number"],
+.receipt-container select,
+.receipt-container input[type="file"] {
+  padding: 0.75rem;
+  border: 1px solid #ddd;
+  border-radius: 8px;
+  font-size: 0.95rem;
+  width: 100%;
+  box-sizing: border-box;
+  transition: all 0.2s ease;
+  background: white;
+}
+
+.receipt-container input[type="text"]:focus,
+.receipt-container input[type="number"]:focus,
+.receipt-container select:focus {
+  outline: none;
+  border-color: #667eea;
+  box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+}
+
+/* Helper text */
+.receipt-container small {
+  font-size: 0.8rem;
+  color: #777;
+  margin-top: 0.25rem;
+}
+
+/* Buttons */
+.receipt-container button {
+  padding: 0.75rem 1.5rem;
+  font-size: 0.95rem;
+  font-weight: 600;
+  border: none;
+  border-radius: 8px;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
+}
+
+.receipt-container button:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(102, 126, 234, 0.4);
+}
+
+.receipt-container button:active {
+  transform: translateY(0);
+}
+
+/* Button group */
+.receipt-container .button-group {
+  display: flex;
+  gap: 1rem;
+  justify-content: center;
+  margin-top: 2rem;
+  flex-wrap: wrap;
+}
+
+.receipt-container .button-group button {
+  flex: 1;
+  min-width: 150px;
+  padding: 0.75rem 1.5rem;
+}
+
+/* Split sections */
+.receipt-container .split-section {
+  margin-top: 1.5rem;
+  padding: 1.5rem;
+  border: 1px solid #e0e0e0;
+  border-radius: 12px;
+  background-color: #f8f9fa;
+}
+
+.receipt-container .split-section h4 {
+  margin-bottom: 1rem;
+  color: #333;
+  font-size: 1.1rem;
+  font-weight: 600;
+}
+
+.receipt-container .split-section p {
+  margin: 0.5rem 0;
+  color: #555;
+  line-height: 1.6;
+}
+
+/* Item entry */
+.receipt-container .item-entry {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  margin-bottom: 1rem;
+  padding: 1rem;
+  background: white;
+  border-radius: 8px;
+  border: 1px solid #e0e0e0;
+}
+
+.receipt-container .item-entry input {
+  flex: 1;
+}
+
+/* Item participant row */
+.receipt-container .item-participant-row {
+  display: flex;
+  flex-direction: row;
+  gap: 0.75rem;
+  margin-top: 0.75rem;
+  flex-wrap: wrap;
+}
+
+.receipt-container .item-participant-cell {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  flex: 1;
+  min-width: 120px;
+}
+
+.receipt-container .item-participant-cell label {
+  font-size: 0.8rem;
+  margin-bottom: 0.25rem;
+  color: #666;
+  font-weight: 500;
+}
+
+.receipt-container .item-participant-cell select {
+  width: 100%;
+  padding: 0.5rem;
+  font-size: 0.85rem;
+  border: 1px solid #ddd;
+  border-radius: 6px;
+  background: white;
+}
+
+/* Itemized summary */
+.receipt-container .itemized-summary {
+  margin-top: 1rem;
+  padding: 1rem;
+  background: white;
+  border-radius: 8px;
+  border: 1px solid #e0e0e0;
+}
+
+.receipt-container .itemized-summary h4 {
+  margin-bottom: 0.75rem;
+  color: #333;
+  font-size: 1rem;
+  font-weight: 600;
+}
+
+.receipt-container .itemized-summary p {
+  margin: 0.5rem 0;
+  color: #555;
+  font-weight: 500;
+}
+
+/* Total info display */
+.receipt-container p[style*="font-weight: bold"] {
+  margin-top: 1.5rem;
+  padding: 1rem;
+  background: linear-gradient(135deg, rgba(102, 126, 234, 0.1) 0%, rgba(118, 75, 162, 0.1) 100%);
+  border-radius: 8px;
+  border: 1px solid rgba(102, 126, 234, 0.2);
+  color: #333;
+  font-size: 0.95rem;
+  text-align: center;
+}
+
+/* Form group within split section */
+.receipt-container .split-section .form-group {
+  margin-bottom: 1rem;
+}
+
+.receipt-container .split-section .form-group label {
+  font-size: 0.9rem;
+  margin-bottom: 0.4rem;
+}
+
+.receipt-container .split-section .form-group input {
+  padding: 0.65rem;
+}
+
+.receipt-container .split-section .form-group span {
+  margin-left: 0.5rem;
+  color: #667eea;
+  font-weight: 600;
+}
+
+/* Responsive design */
+@media (max-width: 768px) {
+  .receipt-container {
+    padding: 1rem 0;
+  }
+
+  .receipt-container .container {
+    margin: 1rem;
+    padding: 1.5rem;
+    max-width: 100%;
+  }
+
+  .receipt-container .button-group {
+    flex-direction: column;
+  }
+
+  .receipt-container .button-group button {
+    width: 100%;
+  }
+
+  .receipt-container .item-participant-row {
+    flex-direction: column;
+  }
+
+  .receipt-container .item-participant-cell {
+    width: 100%;
+  }
+}
+
+.receipt-container .button-group button.discard {
+  background: #ff6b6b;
+  box-shadow: 0 4px 12px rgba(255, 107, 107, 0.3);
+}
+
+.receipt-container .button-group button.discard:hover {
+  background: #ee5a5a;
+  box-shadow: 0 6px 20px rgba(255, 107, 107, 0.4);
+}
+
+/* Add these new styles to your existing ReceiptPage.css */
+
+/* Creator info banner */
+.receipt-container .creator-info {
+  background: linear-gradient(135deg, rgba(255, 215, 0, 0.2) 0%, rgba(255, 193, 7, 0.2) 100%);
+  border: 2px solid rgba(255, 215, 0, 0.5);
+  border-radius: 10px;
+  padding: 1rem;
+  margin-bottom: 1.5rem;
+  text-align: center;
+  font-size: 0.95rem;
+  color: #333;
+}
+
+.receipt-container .creator-info strong {
+  color: #d97706;
+}
+
+/* Item header with delete button */
+.receipt-container .item-header {
+  display: flex;
+  gap: 0.75rem;
+  align-items: flex-start;
+}
+
+.receipt-container .item-header .item-inputs {
+  flex: 1;
+  display: flex;
+  gap: 0.75rem;
+}
+
+.receipt-container .delete-item-btn {
+  background: #ff6b6b;
+  color: white;
+  border: none;
+  border-radius: 6px;
+  width: 36px;
+  height: 36px;
+  min-width: 36px;
+  font-size: 1.5rem;
+  font-weight: 600;
+  line-height: 1;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  display: flex;
+  alignalign-items: center;
+  justify-content: center;
+  box-shadow: 0 2px 6px rgba(255, 107, 107, 0.3);
+  flex-shrink: 0;
+}
+
+.receipt-container .delete-item-btn:hover {
+  background: #ee5a5a;
+  transform: scale(1.1);
+  box-shadow: 0 3px 8px rgba(255, 107, 107, 0.4);
+}
+
+.receipt-container .delete-item-btn:active {
+  transform: scale(0.95);
+}
+
+/* Update participant tag styles for better spacing */
+.receipt-container .participant-tag {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  background: linear-gradient(135deg, rgba(102, 126, 234, 0.1) 0%, rgba(118, 75, 162, 0.1) 100%);
+  border: 1px solid rgba(102, 126, 234, 0.3);
+  border-radius: 20px;
+  padding: 0.5rem 0.75rem;
+  font-size: 0.85rem;
+  color: #333;
+  transition: all 0.2s ease;
+  min-width: 150px;
+}
+
+.receipt-container .participant-tag:hover {
+  background: linear-gradient(135deg, rgba(102, 126, 234, 0.15) 0%, rgba(118, 75, 162, 0.15) 100%);
+  border-color: rgba(102, 126, 234, 0.4);
+}
+
+.receipt-container .participant-tag span {
+  font-weight: 500;
+  flex: 1;
+}
+
+.receipt-container .participant-tag button {
+  background: #ff6b6b;
+  color: white;
+  border: none;
+  border-radius: 6px;
+  width: 24px;
+  height: 24px;
+  min-width: 24px;
+  font-size: 1.3rem;
+  font-weight: 600;
+  line-height: 1;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  box-shadow: 0 2px 4px rgba(255, 107, 107, 0.3);
+  flex-shrink: 0;
+  margin-left: auto;
+}
+
+.receipt-container .participant-tag button:hover {
+  background: #ee5a5a;
+  transform: scale(1.15);
+  box-shadow: 0 3px 6px rgba(255, 107, 107, 0.4);
+}
+
+.receipt-container .participant-tag button:active {
+  transform: scale(1);
+}
+/* Update these styles in your ReceiptPage.css */
+
+.receipt-container .delete-item-btn {
+  background: #ff6b6b;
+  color: white;
+  border: none;
+  border-radius: 6px;
+  width: 40px;
+  height: 40px;
+  min-width: 40px;
+  font-size: 1.8rem;
+  font-weight: 600;
+  line-height: 1;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 2px 6px rgba(255, 107, 107, 0.3);
+  flex-shrink: 0;
+  padding: 0;
+  align-self: flex-start;
+}
+
+.receipt-container .delete-item-btn:hover {
+  background: #ee5a5a;
+  transform: scale(1.1);
+  box-shadow: 0 3px 8px rgba(255, 107, 107, 0.4);
+}
+
+.receipt-container .delete-item-btn:active {
+  transform: scale(0.95);
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+  .receipt-container .item-header {
+    flex-direction: column;
+  }
+
+  .receipt-container .delete-item-btn {
+    width: 100%;
+    height: auto;
+    padding: 0.6rem;
+  }
+
+  .receipt-container .item-inputs {
+    flex-direction: column;
+  }
+}

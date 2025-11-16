@@ -1,26 +1,178 @@
 // src/ReceiptPage.js
-import React, { useState, useMemo } from "react";
-import "./EventPage.css"; // reuse styling
+import "./ReceiptPage.css";
 
-const API_BASE = "http://localhost:4000";
+import React, { useEffect, useMemo, useState } from "react";
+import { useNavigate } from "react-router-dom";
+
+const API_BASE = "http://localhost:4000/Splitseez";
 
 function ReceiptPage() {
+  const navigate = useNavigate();
+
   const [receiptFile, setReceiptFile] = useState(null);
   const [tax, setTax] = useState("");
   const [tip, setTip] = useState("");
-
-  // total amount (optional override)
   const [amount, setAmount] = useState("");
 
-  // participants for splitting (emails)
-  const [participantEmails, setParticipantEmails] = useState("");
-  const [splitType, setSplitType] = useState("itemize"); // default
+  const [splitType, setSplitType] = useState("equal");
+  const [eventParticipants, setEventParticipants] = useState([]);
+  const [eventCreator, setEventCreator] = useState(null);
+  const [loading, setLoading] = useState(true);
 
-  // manual items
-  // sharedByMap: { [email]: true } for included participants
+  const [isEditing, setIsEditing] = useState(false);
+  const [receiptId, setReceiptId] = useState(null);
+
+  // For itemized split
   const [items, setItems] = useState([
-    { name: "", amount: "", sharedByMap: {} },
+    { name: "", amount: "", sharedBy: [] },
   ]);
+
+  // For percentage split
+  const [percentages, setPercentages] = useState({});
+
+  // Helper function to format number to 2 decimal places
+  const formatToTwoDecimals = (value) => {
+    if (!value) return "";
+    const num = parseFloat(value);
+    if (isNaN(num)) return "";
+    return num.toFixed(2);
+  };
+
+  // Helper function to validate and format input
+  const handleNumberInput = (value) => {
+    // Allow empty string
+    if (value === "") return "";
+    
+    // Remove any non-digit and non-decimal characters
+    let cleaned = value.replace(/[^\d.]/g, "");
+    
+    // Ensure only one decimal point
+    const parts = cleaned.split(".");
+    if (parts.length > 2) {
+      cleaned = parts[0] + "." + parts.slice(1).join("");
+    }
+    
+    // Limit to 2 decimal places
+    if (parts.length === 2 && parts[1].length > 2) {
+      cleaned = parts[0] + "." + parts[1].substring(0, 2);
+    }
+    
+    return cleaned;
+  };
+
+  // Load event participants and receipt data if editing
+  useEffect(() => {
+    loadEventParticipants();
+    checkForExistingReceipt();
+  }, []);
+
+  const loadEventParticipants = async () => {
+    const token = localStorage.getItem("token");
+    const eventId = localStorage.getItem("lastEventId");
+
+    if (!token || !eventId) {
+      setLoading(false);
+      return;
+    }
+
+    try {
+      const res = await fetch(`${API_BASE}/Event/${eventId}`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+
+      if (res.ok) {
+        const event = await res.json();
+        const participants = event.participants || [];
+        
+        // Set creator info
+        setEventCreator(event.creator);
+        
+        // Include creator in participants if not already there
+        const allParticipants = [...participants];
+        const creatorAlreadyIncluded = participants.some(
+          (p) => p._id === event.creator._id
+        );
+        
+        if (!creatorAlreadyIncluded) {
+          allParticipants.unshift(event.creator);
+        }
+        
+        setEventParticipants(
+          allParticipants.map((p) => ({
+            id: p._id,
+            email: p.email,
+            name: p.name,
+            isCreator: p._id === event.creator._id,
+          }))
+        );
+
+        // If event has a receipt, load it for editing
+        if (event.receipt) {
+          loadReceiptData(event.receipt._id || event.receipt);
+        }
+      }
+    } catch (err) {
+      console.error("Error loading event participants:", err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const checkForExistingReceipt = async () => {
+    const editingReceiptId = localStorage.getItem("editingReceiptId");
+    if (editingReceiptId) {
+      await loadReceiptData(editingReceiptId);
+    }
+  };
+
+  const loadReceiptData = async (id) => {
+    const token = localStorage.getItem("token");
+    if (!token) return;
+
+    try {
+      setLoading(true);
+      const res = await fetch(`${API_BASE}/Receipt/${id}`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+
+      if (res.ok) {
+        const data = await res.json();
+        const receipt = data.receipt;
+
+        setIsEditing(true);
+        setReceiptId(id);
+        setAmount(receipt.total?.toString() || "");
+        setTax(receipt.tax?.toString() || "");
+        setTip(receipt.tip?.toString() || "");
+        setSplitType(receipt.split_type || "equal");
+
+        // Load items for itemized split
+        if (receipt.split_type === "item" && receipt.items) {
+          setItems(
+            receipt.items.map((item) => ({
+              name: item.name || "",
+              amount: item.amount?.toString() || "",
+              sharedBy: item.shared_by.map((user) => user._id || user),
+            }))
+          );
+        }
+
+        // Load percentages for percentage split
+        if (receipt.split_type === "percent" && receipt.split_details) {
+          const percentMap = {};
+          receipt.split_details.forEach((detail) => {
+            const userId = detail.user._id || detail.user;
+            percentMap[userId] = detail.percent?.toString() || "";
+          });
+          setPercentages(percentMap);
+        }
+      }
+    } catch (err) {
+      console.error("Error loading receipt:", err);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const handleReceiptChange = (e) => {
     const file = e.target.files?.[0];
@@ -28,10 +180,22 @@ function ReceiptPage() {
   };
 
   const handleAddItem = () => {
-    setItems((prev) => [...prev, { name: "", amount: "", sharedByMap: {} }]);
+    setItems((prev) => [...prev, { name: "", amount: "", sharedBy: [] }]);
+  };
+
+  const handleDeleteItem = (index) => {
+    if (items.length === 1) {
+      alert("You must have at least one item.");
+      return;
+    }
+    setItems((prev) => prev.filter((_, i) => i !== index));
   };
 
   const handleItemChange = (index, field, value) => {
+    if (field === "amount") {
+      value = handleNumberInput(value);
+    }
+    
     setItems((prev) => {
       const updated = [...prev];
       updated[index] = { ...updated[index], [field]: value };
@@ -39,26 +203,32 @@ function ReceiptPage() {
     });
   };
 
-  // side-by-side item participant selection
-  const handleItemParticipantSelection = (itemIndex, email, includeOrExclude) => {
+  const handleAddParticipantToItem = (index, participantId) => {
+    if (!participantId) return;
+
     setItems((prev) => {
       const updated = [...prev];
-      const item = { ...updated[itemIndex] };
-      const map = { ...(item.sharedByMap || {}) };
-
-      if (includeOrExclude === "include") {
-        map[email] = true;
-      } else {
-        delete map[email];
+      const item = { ...updated[index] };
+      
+      if (!item.sharedBy.includes(participantId)) {
+        item.sharedBy = [...item.sharedBy, participantId];
       }
-
-      item.sharedByMap = map;
-      updated[itemIndex] = item;
+      
+      updated[index] = item;
       return updated;
     });
   };
 
-  // compute total from items + tax + tip
+  const handleRemoveParticipantFromItem = (index, participantId) => {
+    setItems((prev) => {
+      const updated = [...prev];
+      const item = { ...updated[index] };
+      item.sharedBy = item.sharedBy.filter((id) => id !== participantId);
+      updated[index] = item;
+      return updated;
+    });
+  };
+
   const itemsTotal = useMemo(
     () => items.reduce((sum, it) => sum + (Number(it.amount) || 0), 0),
     [items]
@@ -69,193 +239,241 @@ function ReceiptPage() {
     [itemsTotal, tax, tip]
   );
 
-  // Effective total used for splits
   const effectiveTotal = amount ? Number(amount) : computedFromItems;
 
-  // parsed participants as array of emails
-  const splitParticipants = useMemo(
-    () =>
-      participantEmails
-        .split(",")
-        .map((e) => e.trim())
-        .filter((e) => e.length > 0),
-    [participantEmails]
-  );
-
-  // percentage per participant
-  const [percentages, setPercentages] = useState({});
-
-  const handlePercentageChange = (email, value) => {
-    setPercentages((prev) => ({ ...prev, [email]: value }));
+  const handlePercentageChange = (userId, value) => {
+    setPercentages((prev) => ({ ...prev, [userId]: value }));
   };
 
-  // 🔹 NEW: final per-participant totals for ITEMIZE split
   const itemizedTotals = useMemo(() => {
     const totals = {};
-    splitParticipants.forEach((email) => {
-      totals[email] = 0;
-    });
+    eventParticipants.forEach((p) => (totals[p.id] = 0));
 
     items.forEach((item) => {
       const price = Number(item.amount) || 0;
       if (!price) return;
 
-      const included = splitParticipants.filter(
-        (email) => item.sharedByMap?.[email]
-      );
-      const count = included.length;
-      if (count === 0) return;
+      const sharedBy = item.sharedBy || [];
+      if (sharedBy.length === 0) return;
 
-      const share = price / count;
-      included.forEach((email) => {
-        totals[email] += share;
+      const share = price / sharedBy.length;
+      sharedBy.forEach((id) => {
+        totals[id] = (totals[id] || 0) + share;
       });
     });
 
+    const subtotalSum = Object.values(totals).reduce((acc, val) => acc + val, 0);
+    if (subtotalSum > 0) {
+      const taxAmount = Number(tax) || 0;
+      const tipAmount = Number(tip) || 0;
+      const extras = taxAmount + tipAmount;
+
+      Object.keys(totals).forEach((id) => {
+        const ratio = totals[id] / subtotalSum;
+        totals[id] += ratio * extras;
+      });
+    }
+
     return totals;
-  }, [items, splitParticipants]);
+  }, [items, eventParticipants, tax, tip]);
 
   const handleSubmitReceipt = async () => {
     const token = localStorage.getItem("token");
-    if (!token) {
-      alert("You must be logged in. Missing token.");
-      return;
-    }
+    if (!token) return alert("You must be logged in.");
 
     const eventId = localStorage.getItem("lastEventId");
-    if (!eventId) {
-      alert("No event found. Please create an event first.");
-      return;
+    if (!eventId) return alert("No event found.");
+
+    if (eventParticipants.length === 0) {
+      return alert("No participants found for this event.");
     }
 
-    if (!receiptFile && items.every((i) => !i.name || !i.amount)) {
-      alert("Please upload a file or add at least one item.");
-      return;
+    if (effectiveTotal <= 0) {
+      return alert("Total amount must be greater than 0.");
     }
 
     try {
-      const formData = new FormData();
-      formData.append("event", eventId); // event ObjectId
+      let payload = {
+        eventId,
+        tax: Number(tax) || 0,
+        tip: Number(tip) || 0,
+        total: effectiveTotal,
+        split_type: splitType,
+      };
 
-      if (receiptFile) {
-        formData.append("receiptImage", receiptFile);
-      }
+      if (splitType === "equal") {
+        payload.split_details = eventParticipants.map((p) => ({
+          user: p.id,
+          percent: null,
+        }));
+      } else if (splitType === "percent") {
+        const totalPercent = Object.values(percentages).reduce(
+          (sum, val) => sum + (Number(val) || 0),
+          0
+        );
+        if (Math.abs(totalPercent - 100) > 0.01) {
+          return alert("Percentages must add up to 100%");
+        }
 
-      if (tax !== "") formData.append("tax", String(tax));
-      if (tip !== "") formData.append("tip", String(tip));
-      formData.append("totalAmount", String(effectiveTotal));
-      formData.append("splitType", splitType);
-      formData.append(
-        "splitParticipants",
-        JSON.stringify(splitParticipants)
-      );
+        payload.split_details = eventParticipants
+          .filter((p) => percentages[p.id])
+          .map((p) => ({
+            user: p.id,
+            percent: Number(percentages[p.id]),
+          }));
+      } else if (splitType === "item") {
+        const validItems = items.filter((i) => i.name && i.amount);
+        if (validItems.length === 0) {
+          return alert("Please add at least one item with name and amount.");
+        }
 
-      // send items as JSON; convert sharedByMap -> array
-      const itemsPayload = items
-        .filter((i) => i.name && i.amount)
-        .map((i) => ({
+        const itemsWithoutParticipants = validItems.filter(
+          (i) => !i.sharedBy || i.sharedBy.length === 0
+        );
+        if (itemsWithoutParticipants.length > 0) {
+          return alert(
+            "Each item must have at least one participant sharing it."
+          );
+        }
+
+        payload.items = validItems.map((i) => ({
           name: i.name,
           amount: Number(i.amount),
-          shared_by: Object.keys(i.sharedByMap || {}).filter(
-            (email) => i.sharedByMap[email]
-          ),
+          shared_by: i.sharedBy,
         }));
 
-      formData.append("items", JSON.stringify(itemsPayload));
-
-      const res = await fetch(`${API_BASE}/Receipt`, {
-        method: "POST",
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-        body: formData,
-      });
-
-      if (!res.ok) {
-        const text = await res.text();
-        console.error("Receipt upload failed:", res.status, text);
-        alert("Failed to upload receipt.");
-        return;
+        payload.split_details = [];
       }
 
-      alert("Receipt saved successfully!");
+      let res;
+      if (isEditing && receiptId) {
+        // Update existing receipt
+        res = await fetch(`${API_BASE}/Receipt/${receiptId}`, {
+          method: "PUT",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`,
+          },
+          body: JSON.stringify(payload),
+        });
+      } else {
+        // Create new receipt
+        res = await fetch(`${API_BASE}/Receipt`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`,
+          },
+          body: JSON.stringify(payload),
+        });
+      }
+
+      if (!res.ok) {
+        const errorData = await res.json();
+        console.error("Save failed:", errorData);
+        return alert(errorData.message || "Failed to save receipt.");
+      }
+
+      localStorage.removeItem("editingReceiptId");
+      alert(isEditing ? "Receipt updated successfully!" : "Receipt saved successfully!");
+      navigate("/dashboard");
     } catch (err) {
       console.error(err);
-      alert("Could not connect to backend server.");
+      alert("Cannot connect to server.");
     }
   };
 
-  return (
-    <div className="event-container">
-      <div className="container">
-        <h2>Upload Receipt</h2>
+  const handleDiscard = () => {
+    if (!window.confirm("Discard all changes?")) return;
+    
+    setAmount("");
+    setTax("");
+    setTip("");
+    setSplitType("equal");
+    setItems([{ name: "", amount: "", sharedBy: [] }]);
+    setPercentages({});
+    setReceiptFile(null);
+    localStorage.removeItem("editingReceiptId");
+    
+    if (isEditing) {
+      navigate("/dashboard");
+    }
+  };
 
-        {/* Total amount (optional override) */}
+  if (loading) {
+    return (
+      <div className="receipt-container">
+        <div className="container">
+          <div>Loading event data...</div>
+        </div>
+      </div>
+    );
+  }
+
+  if (eventParticipants.length === 0) {
+    return (
+      <div className="receipt-container">
+        <div className="container">
+          <h2>Upload Receipt</h2>
+          <p style={{ color: "red" }}>
+            No participants found for this event. Please add participants to the
+            event first.
+          </p>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="receipt-container">
+      <div className="container">
+        <h2>{isEditing ? "Edit Receipt" : "Upload Receipt"}</h2>
+
+        {eventCreator && (
+          <div className="creator-info">
+            <strong>Event Creator (Payer):</strong> {eventCreator.name} ({eventCreator.email})
+          </div>
+        )}
+
         <div className="form-group">
           <label htmlFor="amount">Total Amount ($) (optional):</label>
           <input
-            type="number"
+            type="text"
             id="amount"
             placeholder="0.00"
-            min="0"
-            step="0.01"
             value={amount}
-            onChange={(e) => setAmount(e.target.value)}
+            onChange={(e) => setAmount(handleNumberInput(e.target.value))}
           />
-          <small>
-            If left empty, total = items + tax + tip.
-          </small>
+          <small>If left empty, total = items + tax + tip.</small>
         </div>
 
-        {/* Choose File */}
         <div className="form-group">
           <label>Receipt Image (optional):</label>
-          <input
-            type="file"
-            accept="image/*"
-            onChange={handleReceiptChange}
-          />
+          <input type="file" accept="image/*" onChange={handleReceiptChange} />
         </div>
 
-        {/* Tax / Tip */}
         <div className="form-group">
           <label htmlFor="tax">Tax (optional):</label>
           <input
-            type="number"
+            type="text"
             id="tax"
             placeholder="0.00"
-            min="0"
-            step="0.01"
             value={tax}
-            onChange={(e) => setTax(e.target.value)}
+            onChange={(e) => setTax(handleNumberInput(e.target.value))}
           />
         </div>
 
         <div className="form-group">
           <label htmlFor="tip">Tip (optional):</label>
           <input
-            type="number"
+            type="text"
             id="tip"
             placeholder="0.00"
-            min="0"
-            step="0.01"
             value={tip}
-            onChange={(e) => setTip(e.target.value)}
+            onChange={(e) => setTip(handleNumberInput(e.target.value))}
           />
         </div>
 
-        {/* Participants for splitting */}
-        <div className="form-group">
-          <label>Participants for Split (emails, comma-separated):</label>
-          <input
-            type="text"
-            placeholder="alice@example.com, bob@example.com"
-            value={participantEmails}
-            onChange={(e) => setParticipantEmails(e.target.value)}
-          />
-        </div>
-
-        {/* Split type selector */}
         <div className="form-group">
           <label htmlFor="splitType">Split Type:</label>
           <select
@@ -264,140 +482,198 @@ function ReceiptPage() {
             onChange={(e) => setSplitType(e.target.value)}
           >
             <option value="equal">Split Equally</option>
-            <option value="percentage">Split by Percentage</option>
-            <option value="itemize">Itemize</option>
+            <option value="percent">Split by Percentage</option>
+            <option value="item">Itemize</option>
           </select>
         </div>
 
-        {/* Equal Split preview */}
-        {splitType === "equal" && splitParticipants.length > 0 && (
+        {/* ----- Equal Split Preview ----- */}
+        {splitType === "equal" && (
           <div className="split-section">
             <h4>Split Equally (Preview):</h4>
             <p>Effective Total: ${effectiveTotal.toFixed(2)}</p>
-            {splitParticipants.map((email, i) => (
-              <p key={email + i}>
-                {email} owes $
-                {(effectiveTotal / splitParticipants.length || 0).toFixed(2)}
+            {eventParticipants.map((participant) => (
+              <p key={participant.id}>
+                {participant.name} ({participant.email})
+                {participant.isCreator && " 👑 (Creator/Payer)"} owes $
+                {(effectiveTotal / eventParticipants.length).toFixed(2)}
               </p>
             ))}
           </div>
         )}
 
-        {/* Percentage Split preview */}
-        {splitType === "percentage" && splitParticipants.length > 0 && (
+        {/* ----- Percentage Split ----- */}
+        {splitType === "percent" && (
           <div className="split-section">
-            <h4>Split by Percentage (Preview):</h4>
+            <h4>Split by Percentage:</h4>
             <p>Effective Total: ${effectiveTotal.toFixed(2)}</p>
-            {splitParticipants.map((email, i) => (
-              <div key={email + i} className="form-group">
-                <label>{email} (%):</label>
+
+            {eventParticipants.map((participant) => (
+              <div key={participant.id} className="form-group">
+                <label>
+                  {participant.name} ({participant.email})
+                  {participant.isCreator && " 👑 (Creator/Payer)"} (%):
+                </label>
                 <input
                   type="number"
                   min="0"
                   max="100"
                   step="1"
-                  value={percentages[email] || ""}
+                  value={percentages[participant.id] || ""}
                   onChange={(e) =>
-                    handlePercentageChange(email, e.target.value)
+                    handlePercentageChange(participant.id, e.target.value)
                   }
                 />
-                <span>
-                  {percentages[email]
-                    ? ` = $${(
-                        (Number(percentages[email]) / 100) *
-                        effectiveTotal
-                      ).toFixed(2)}`
-                    : ""}
-                </span>
+                {percentages[participant.id] && (
+                  <span>
+                    {" "}
+                    = $
+                    {(
+                      (Number(percentages[participant.id]) / 100) *
+                      effectiveTotal
+                    ).toFixed(2)}
+                  </span>
+                )}
               </div>
             ))}
+            <p>
+              <strong>
+                Total Percentage:{" "}
+                {Object.values(percentages)
+                  .reduce((sum, val) => sum + (Number(val) || 0), 0)
+                  .toFixed(0)}
+                %
+              </strong>
+            </p>
           </div>
         )}
 
-        {/* Itemized Items (manual) + side-by-side participant dropdowns */}
-        {splitType === "itemize" && (
+        {/* ----- Itemized Split ----- */}
+        {splitType === "item" && (
           <div className="split-section">
-            <h4>Itemized Items (Manual):</h4>
+            <h4>Itemized Items:</h4>
+
             {items.map((item, index) => (
               <div key={index} className="item-entry">
-                <input
-                  type="text"
-                  placeholder="Item name"
-                  value={item.name}
-                  onChange={(e) =>
-                    handleItemChange(index, "name", e.target.value)
-                  }
-                />
-                <input
-                  type="number"
-                  placeholder="Amount ($)"
-                  value={item.amount}
-                  onChange={(e) =>
-                    handleItemChange(index, "amount", e.target.value)
-                  }
-                />
+                <div className="item-header">
+                  <div className="item-inputs">
+                    <input
+                      type="text"
+                      placeholder="Item name"
+                      value={item.name}
+                      onChange={(e) =>
+                        handleItemChange(index, "name", e.target.value)
+                      }
+                    />
+                    <input
+                      type="text"
+                      placeholder="0.00"
+                      value={item.amount}
+                      onChange={(e) =>
+                        handleItemChange(index, "amount", e.target.value)
+                      }
+                    />
+                  </div>
+                  {items.length > 1 && (
+                    <button
+                      type="button"
+                      className="delete-item-btn"
+                      onClick={() => handleDeleteItem(index)}
+                      title="Delete item"
+                    >
+                      ×
+                    </button>
+                  )}
+                </div>
 
-                {/* row of dropdowns, one for each participant */}
-                {splitParticipants.length > 0 && (
-                  <div className="item-participant-row">
-                    {splitParticipants.map((email, i) => {
-                      const included = item.sharedByMap?.[email]
-                        ? "include"
-                        : "exclude";
-                      return (
-                        <div
-                          key={email + i}
-                          className="item-participant-cell"
-                        >
-                          <label>{email}</label>
-                          <select
-                            value={included}
-                            onChange={(e) =>
-                              handleItemParticipantSelection(
-                                index,
-                                email,
-                                e.target.value
-                              )
-                            }
-                          >
-                            <option value="exclude">Exclude</option>
-                            <option value="include">Include</option>
-                          </select>
-                        </div>
-                      );
-                    })}
+                {/* Dropdown to add participants */}
+                <div className="add-participant-dropdown">
+                  <label>Add participants sharing this item:</label>
+                  <select
+                    onChange={(e) => {
+                      handleAddParticipantToItem(index, e.target.value);
+                      e.target.value = "";
+                    }}
+                    value=""
+                  >
+                    <option value="" disabled>
+                      Select a participant...
+                    </option>
+                    {eventParticipants
+                      .filter((p) => !item.sharedBy.includes(p.id))
+                      .map((participant) => (
+                        <option key={participant.id} value={participant.id}>
+                          {participant.name} ({participant.email})
+                          {participant.isCreator && " 👑"}
+                        </option>
+                      ))}
+                  </select>
+                </div>
+
+                {/* List of selected participants */}
+                {item.sharedBy.length > 0 && (
+                  <div className="selected-participants">
+                    <label>Shared by:</label>
+                    <div className="participant-tags">
+                      {item.sharedBy.map((participantId) => {
+                        const participant = eventParticipants.find(
+                          (p) => p.id === participantId
+                        );
+                        return participant ? (
+                          <div key={participantId} className="participant-tag">
+                            <span>
+                              {participant.name}
+                              {participant.isCreator && " 👑"}
+                            </span>
+                            <button
+                              type="button"
+                              onClick={() =>
+                                handleRemoveParticipantFromItem(
+                                  index,
+                                  participantId
+                                )
+                              }
+                              title="Remove participant"
+                            >
+                              ×
+                            </button>
+                          </div>
+                        ) : null;
+                      })}
+                    </div>
                   </div>
                 )}
               </div>
             ))}
+
             <button type="button" onClick={handleAddItem}>
               + Add Item
             </button>
 
-            {/* 🔹 NEW: final per-participant summary for itemized split */}
-            {splitParticipants.length > 0 && (
-              <div className="itemized-summary">
-                <h4>Final Split by Participant:</h4>
-                {splitParticipants.map((email) => (
-                  <p key={email}>
-                    {email} owes $
-                    {(itemizedTotals[email] || 0).toFixed(2)}
-                  </p>
-                ))}
-              </div>
-            )}
+            <div className="itemized-summary">
+              <h4>Final Itemized Split:</h4>
+              {eventParticipants.map((participant) => (
+                <p key={participant.id}>
+                  {participant.name} ({participant.email})
+                  {participant.isCreator && " 👑 (Creator/Payer)"} owes $
+                  {(itemizedTotals[participant.id] || 0).toFixed(2)}
+                </p>
+              ))}
+            </div>
           </div>
         )}
 
-        {/* Total info */}
         <p style={{ marginTop: "10px", fontWeight: "bold" }}>
-          Items Total: ${itemsTotal.toFixed(2)} | Effective Total Used for Split: $
+          Items Total: ${itemsTotal.toFixed(2)} | Effective Total Used: $
           {effectiveTotal.toFixed(2)}
         </p>
 
         <div className="button-group">
           <button id="saveReceiptBtn" onClick={handleSubmitReceipt}>
-            Save Receipt
+            {isEditing ? "Update Receipt" : "Save Receipt"}
+          </button>
+          <button id="discardBtn" className="discard" onClick={handleDiscard}>
+            Discard
           </button>
         </div>
       </div>

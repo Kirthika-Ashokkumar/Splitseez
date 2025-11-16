@@ -76,11 +76,7 @@ const signIn = async (req, res) => {
 // Logout
 const logout = async (req, res) => {
   try {
-    const token = req.headers.authorization?.split(' ')[1];
-    if (!token) return res.status(400).json({error: 'Token required.'});
-
-    const decoded = jwt.verify(token, JWT_SECRET);
-    const user = await User.findById(decoded.id);
+    const user = await User.findById(req.user._id);
     if (!user) return res.status(404).json({error: 'User not found.'});
 
     user.token = null;
@@ -89,22 +85,24 @@ const logout = async (req, res) => {
     return res.status(200).json({message: 'Logout successful.'});
   } catch (err) {
     console.error('logout error:', err);
-    return res.status(401).json({error: 'Invalid or expired token.'});
+    return res.status(500).json({error: 'Server error.'});
   }
 };
 
 // Get User by Token (full info)
 const getUserFromToken = async (req, res) => {
   try {
-    const token = req.headers.authorization?.split(' ')[1];
-    if (!token) return res.status(400).json({error: 'Token is required.'});
-
-    const decoded = jwt.verify(token, JWT_SECRET);
-
-    const user = await User.findById(decoded.id)
+    console.log('🔍 getUserFromToken called');
+    console.log('👤 req.user from middleware:', req.user);
+    
+    const user = await User.findById(req.user._id)
       .select('-password')
       .populate('createdEvents', 'title date')
       .populate('participatingEvents', 'title date');
+
+    console.log('📦 Found user in DB:', user);
+    console.log('📝 User name:', user?.name);
+    console.log('📧 User email:', user?.email);
 
     if (!user) return res.status(404).json({error: 'User not found.'});
 
@@ -112,22 +110,18 @@ const getUserFromToken = async (req, res) => {
     userObj.createdEventIds = user.createdEvents.map(e => e._id);
     userObj.participatingEventIds = user.participatingEvents.map(e => e._id);
 
+    console.log('✅ Sending user response:', userObj);
     return res.status(200).json({user: userObj});
   } catch (err) {
-    console.error('getUserFromToken error:', err);
-    return res.status(401).json({error: 'Invalid or expired token.'});
+    console.error('❌ getUserFromToken error:', err);
+    return res.status(500).json({error: 'Server error.'});
   }
 };
 
 // Get only Created Events
 const getCreatedEvents = async (req, res) => {
   try {
-    const token = req.headers.authorization?.split(' ')[1];
-    if (!token) return res.status(400).json({error: 'Token is required.'});
-
-    const decoded = jwt.verify(token, JWT_SECRET);
-
-    const user = await User.findById(decoded.id).populate('createdEvents', 'title date');
+    const user = await User.findById(req.user._id).populate('createdEvents', 'title date');
     if (!user) return res.status(404).json({error: 'User not found.'});
 
     return res.status(200).json({
@@ -136,19 +130,14 @@ const getCreatedEvents = async (req, res) => {
     });
   } catch (err) {
     console.error('getCreatedEvents error:', err);
-    return res.status(401).json({error: 'Invalid or expired token.'});
+    return res.status(500).json({error: 'Server error.'});
   }
 };
 
 // Get only Participating Events
 const getParticipatingEvents = async (req, res) => {
   try {
-    const token = req.headers.authorization?.split(' ')[1];
-    if (!token) return res.status(400).json({error: 'Token is required.'});
-
-    const decoded = jwt.verify(token, JWT_SECRET);
-
-    const user = await User.findById(decoded.id).populate('participatingEvents', 'title date');
+    const user = await User.findById(req.user._id).populate('participatingEvents', 'title date');
     if (!user) return res.status(404).json({error: 'User not found.'});
 
     return res.status(200).json({
@@ -157,7 +146,37 @@ const getParticipatingEvents = async (req, res) => {
     });
   } catch (err) {
     console.error('getParticipatingEvents error:', err);
-    return res.status(401).json({error: 'Invalid or expired token.'});
+    return res.status(500).json({error: 'Server error.'});
+  }
+};
+
+// Validate users by emails - NEW ENDPOINT
+const validateUsersByEmails = async (req, res) => {
+  try {
+    const { emails } = req.body;
+
+    if (!emails || !Array.isArray(emails) || emails.length === 0) {
+      return res.status(400).json({ error: 'Emails array is required.' });
+    }
+
+    // Normalize emails
+    const normalizedEmails = emails.map(e => e.toLowerCase().trim());
+
+    // Find all users with these emails
+    const users = await User.find({ email: { $in: normalizedEmails } }).select('_id email name');
+
+    // Create a map of found emails
+    const foundEmails = users.map(u => u.email);
+    const missingEmails = normalizedEmails.filter(e => !foundEmails.includes(e));
+
+    return res.status(200).json({
+      validUsers: users.map(u => ({ id: u._id, email: u.email, name: u.name })),
+      invalidEmails: missingEmails,
+      allValid: missingEmails.length === 0
+    });
+  } catch (err) {
+    console.error('validateUsersByEmails error:', err);
+    return res.status(500).json({ error: 'Server error.' });
   }
 };
 
@@ -167,5 +186,6 @@ module.exports = {
   logout,
   getUserFromToken,
   getCreatedEvents,
-  getParticipatingEvents
+  getParticipatingEvents,
+  validateUsersByEmails
 };
