@@ -19,7 +19,7 @@ export default function SignupPage() {
     }
     try {
       setLoading(true);
-      const res = await fetch("http://localhost:4000/Users/Signup", {
+      const res = await fetch("http://localhost:4000/Splitseez/Users/Signup", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ name, email, password }),

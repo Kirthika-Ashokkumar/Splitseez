@@ -1,116 +1,71 @@
 const bcrypt = require('bcryptjs');
-const crypto = require('crypto');
-const User = require('../models/user');
 const jwt = require('jsonwebtoken');
-
+const User = require('../models/user');
 
 const JWT_SECRET = process.env.JWT_SECRET || 'supersecretkey';
 const JWT_EXPIRATION = '2h';
 
-
-
-// const PHONE_KEY_BASE64 = process.env.PHONE_ENC_KEY || ''; 
-// let PHONE_KEY_BUFFER = null;
-// if (PHONE_KEY_BASE64) {
-//   PHONE_KEY_BUFFER = Buffer.from(PHONE_KEY_BASE64, 'base64');
-//   if (PHONE_KEY_BUFFER.length !== 32) {
-//     console.warn(
-//         'PHONE_ENC_KEY is not 32 bytes after base64 decode — phone encryption will not be used.');
-//     PHONE_KEY_BUFFER = null;
-//   }
-// }
-
-// // AES-GCM encryption helpers (reversible)
-// function encryptPhone(plainText) {
-//   if (!PHONE_KEY_BUFFER) return null;
-//   // Generate a random 12-byte IV
-//   const iv = crypto.randomBytes(12);
-//   const cipher = crypto.createCipheriv('aes-256-gcm', PHONE_KEY_BUFFER, iv);
-//   const encrypted =
-//       Buffer.concat([cipher.update(plainText, 'utf8'), cipher.final()]);
-//   const tag = cipher.getAuthTag();
-//   return Buffer.concat([iv, tag, encrypted]).toString('base64');
-// }
-
-// function decryptPhone(encBase64) {
-//   if (!PHONE_KEY_BUFFER) return null;
-//   const data = Buffer.from(encBase64, 'base64');
-//   const iv = data.slice(0, 12);
-//   const tag = data.slice(12, 28);
-//   const encrypted = data.slice(28);
-//   const decipher = crypto.createDecipheriv('aes-256-gcm', PHONE_KEY_BUFFER, iv);
-//   decipher.setAuthTag(tag);
-//   const decrypted =
-//       Buffer.concat([decipher.update(encrypted), decipher.final()]);
-//   return decrypted.toString('utf8');
-// }
-
-
+// Sign Up
 const signUp = async (req, res) => {
   try {
     let {name, email, password} = req.body ?? {};
 
-    // Basic validation
     if (!name || !email || !password) {
-      return res.status(400).json(
-          {error: 'Name, email and password are required.'});
+      return res.status(400).json({error: 'Name, email and password are required.'});
     }
 
-    // Normalize email (simple)
     name = name.trim();
     email = email.toLowerCase().trim();
     password = password.trim();
 
-
-    // Check if user already exists with same email
     const existing = await User.findOne({email});
     if (existing) {
-      return res.status(409).json(
-          {error: 'A user with that email already exists.'});
+      return res.status(409).json({error: 'A user with that email already exists.'});
     }
 
-    // if (phone) {
-    //   const phoneNormalized = phone.replace(/\D/g, ''); 
-    //   const phoneHash =
-    //       crypto.createHash('sha256').update(phoneNormalized).digest('hex');
-    //   const existingPhone = await User.findOne({phoneHash});
-    //   if (existingPhone) {
-    //     return res.status(409).json(
-    //         {error: 'A user with that phone number already exists.'});
-    //   }
+    const hashedPassword = await bcrypt.hash(password, 12);
 
-    //   req.body._phoneHash = phoneHash;
-    // }
-
-    // Hash the password with bcrypt (recommended)
-    const saltRounds = 12;  // 10-12 is common. higher = slower but stronger.
-    const hashedPassword = await bcrypt.hash(password, saltRounds);
-
-    // let encryptedPhone = null;
-    // let phoneHashToSave = req.body._phoneHash || null;
-    // if (phone) {
-    //   const phoneNormalized = phone.trim();
-    //   encryptedPhone =
-    //       PHONE_KEY_BUFFER ? encryptPhone(phoneNormalized) : phoneNormalized;
-    // }
-
-    // Create user object and save
-    const newUser = new User({
-      name,
-      email,
-      password: hashedPassword,   
-    });
-
+    const newUser = new User({name, email, password: hashedPassword});
     await newUser.save();
 
     return res.status(201).json({
       message: 'User created successfully',
-      user: {
-        id: newUser._id,
-        name: newUser.name,
-        email: newUser.email,
-        username: newUser.username,
-      }
+      user: {name: newUser.name, email: newUser.email},
+    });
+  } catch (err) {
+    console.error('signUp error:', err);
+    return res.status(500).json({error: 'Server error'});
+  }
+};
+
+// Sign In
+const signIn = async (req, res) => {
+  try {
+    let {email, password} = req.body ?? {};
+
+    if (!email || !password)
+      return res.status(400).json({error: 'Email and password are required.'});
+
+    email = email.toLowerCase().trim();
+    password = password.trim();
+
+    const user = await User.findOne({email});
+    if (!user)
+      return res.status(401).json({error: 'Invalid email or password.'});
+
+    const passwordMatch = await bcrypt.compare(password, user.password);
+    if (!passwordMatch)
+      return res.status(401).json({error: 'Invalid email or password.'});
+
+    const token = jwt.sign({id: user._id, email: user.email}, JWT_SECRET, {expiresIn: JWT_EXPIRATION});
+
+    user.token = token;
+    await user.save();
+
+    return res.status(200).json({
+      message: 'Sign-in successful',
+      user: {name: user.name, email: user.email},
+      token,
     });
   } catch (err) {
     console.error('signIn error:', err);
@@ -118,64 +73,99 @@ const signUp = async (req, res) => {
   }
 };
 
-const signIn = async (req, res) => {
-  try {
-    let { email, password } = req.body ?? {};
-    if (!email || !password)
-      return res.status(400).json({ error: 'Email and password are required.' });
-
-    email = email.toLowerCase().trim();
-    password = password.trim();
-
-    const user = await User.findOne({ email });
-    if (!user) return res.status(401).json({ error: 'Invalid email or password.' });
-
-    const passwordMatch = await bcrypt.compare(password, user.password);
-    if (!passwordMatch) return res.status(401).json({ error: 'Invalid email or password.' });
-
-    const token = jwt.sign({ id: user._id, email: user.email }, JWT_SECRET, {
-      expiresIn: JWT_EXPIRATION,
-    });
-
-    user.token = token;
-    await user.save();
-
-    return res.status(200).json({
-      message: 'Sign-in successful',
-      user: {
-        id: user._id,
-        name: user.name,
-        email: user.email,
-      },
-      token,
-    });
-  } catch (err) {
-    console.error('signIn error:', err);
-    return res.status(500).json({ error: 'Server error' });
-  }
-};
-
+// Logout
 const logout = async (req, res) => {
   try {
     const token = req.headers.authorization?.split(' ')[1];
-    if (!token) return res.status(400).json({ error: 'Token required.' });
+    if (!token) return res.status(400).json({error: 'Token required.'});
 
     const decoded = jwt.verify(token, JWT_SECRET);
     const user = await User.findById(decoded.id);
-    if (!user) return res.status(404).json({ error: 'User not found.' });
+    if (!user) return res.status(404).json({error: 'User not found.'});
 
     user.token = null;
     await user.save();
 
-    return res.status(200).json({ message: 'Logout successful.' });
+    return res.status(200).json({message: 'Logout successful.'});
   } catch (err) {
     console.error('logout error:', err);
-    return res.status(401).json({ error: 'Invalid or expired token.' });
+    return res.status(401).json({error: 'Invalid or expired token.'});
+  }
+};
+
+// Get User by Token (full info)
+const getUserFromToken = async (req, res) => {
+  try {
+    const token = req.headers.authorization?.split(' ')[1];
+    if (!token) return res.status(400).json({error: 'Token is required.'});
+
+    const decoded = jwt.verify(token, JWT_SECRET);
+
+    const user = await User.findById(decoded.id)
+      .select('-password')
+      .populate('createdEvents', 'title date')
+      .populate('participatingEvents', 'title date');
+
+    if (!user) return res.status(404).json({error: 'User not found.'});
+
+    const userObj = user.toObject();
+    userObj.createdEventIds = user.createdEvents.map(e => e._id);
+    userObj.participatingEventIds = user.participatingEvents.map(e => e._id);
+
+    return res.status(200).json({user: userObj});
+  } catch (err) {
+    console.error('getUserFromToken error:', err);
+    return res.status(401).json({error: 'Invalid or expired token.'});
+  }
+};
+
+// Get only Created Events
+const getCreatedEvents = async (req, res) => {
+  try {
+    const token = req.headers.authorization?.split(' ')[1];
+    if (!token) return res.status(400).json({error: 'Token is required.'});
+
+    const decoded = jwt.verify(token, JWT_SECRET);
+
+    const user = await User.findById(decoded.id).populate('createdEvents', 'title date');
+    if (!user) return res.status(404).json({error: 'User not found.'});
+
+    return res.status(200).json({
+      createdEvents: user.createdEvents,
+      createdEventIds: user.createdEvents.map(e => e._id)
+    });
+  } catch (err) {
+    console.error('getCreatedEvents error:', err);
+    return res.status(401).json({error: 'Invalid or expired token.'});
+  }
+};
+
+// Get only Participating Events
+const getParticipatingEvents = async (req, res) => {
+  try {
+    const token = req.headers.authorization?.split(' ')[1];
+    if (!token) return res.status(400).json({error: 'Token is required.'});
+
+    const decoded = jwt.verify(token, JWT_SECRET);
+
+    const user = await User.findById(decoded.id).populate('participatingEvents', 'title date');
+    if (!user) return res.status(404).json({error: 'User not found.'});
+
+    return res.status(200).json({
+      participatingEvents: user.participatingEvents,
+      participatingEventIds: user.participatingEvents.map(e => e._id)
+    });
+  } catch (err) {
+    console.error('getParticipatingEvents error:', err);
+    return res.status(401).json({error: 'Invalid or expired token.'});
   }
 };
 
 module.exports = {
-  signIn,
   signUp,
+  signIn,
   logout,
+  getUserFromToken,
+  getCreatedEvents,
+  getParticipatingEvents
 };

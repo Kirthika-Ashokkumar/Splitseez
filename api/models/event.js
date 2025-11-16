@@ -6,7 +6,7 @@ const EventSchema = new Schema({
   date: { type: Date },
   creator: { type: Schema.Types.ObjectId, ref: 'User', required: true },
   participants: [{ type: Schema.Types.ObjectId, ref: 'User' }],
-  receipts: [{ type: Schema.Types.ObjectId, ref: 'Receipt' }] // link receipts
+  receipt: { type: Schema.Types.ObjectId, ref: 'Receipt' } // link receipts
 });
 
 module.exports = mongoose.model('Event', EventSchema);

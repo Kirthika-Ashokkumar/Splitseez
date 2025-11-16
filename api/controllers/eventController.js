@@ -4,7 +4,7 @@ const User = require('../models/user');
 // Create Event
 const createEvent = async (req, res) => {
   try {
-    const creator = req.user; // comes from auth middleware
+    const creator = req.user; // from auth middleware
     const { title, date, participant_emails } = req.body;
 
     if (!title) {
@@ -91,14 +91,20 @@ const editEvent = async (req, res) => {
 
     if (participant_emails && participant_emails.length > 0) {
       const participants = await User.find({ email: { $in: participant_emails } });
-      const newParticipantIds = participants.map(u => u._id);
+      const newParticipantIds = participants.map(u => u._id.toString());
 
-      // Update participant lists in User documents
-      await User.updateMany(
-        { participatingEvents: event._id },
-        { $pull: { participatingEvents: event._id } }
-      );
+      // Remove event from users who are no longer participants
+      const oldParticipantIds = event.participants.map(id => id.toString());
+      const removedParticipantIds = oldParticipantIds.filter(id => !newParticipantIds.includes(id));
 
+      if (removedParticipantIds.length > 0) {
+        await User.updateMany(
+          { _id: { $in: removedParticipantIds } },
+          { $pull: { participatingEvents: event._id } }
+        );
+      }
+
+      // Add event to new participants
       await User.updateMany(
         { _id: { $in: newParticipantIds } },
         { $addToSet: { participatingEvents: event._id } }
@@ -143,42 +149,9 @@ const deleteEvent = async (req, res) => {
   }
 };
 
-// Join Event (for participants)
-const joinEvent = async (req, res) => {
-  try {
-    const user = req.user;
-    const { id } = req.params; // event ID
-
-    const event = await Event.findById(id);
-    if (!event) {
-      return res.status(404).json({ message: 'Event not found' });
-    }
-
-    // If already a participant
-    if (event.participants.includes(user._id)) {
-      return res.status(400).json({ message: 'You already joined this event' });
-    }
-
-    // Add user to event participants
-    event.participants.push(user._id);
-    await event.save();
-
-    // Add event to user’s participatingEvents
-    await User.findByIdAndUpdate(user._id, {
-      $addToSet: { participatingEvents: event._id }
-    });
-
-    res.status(200).json({ message: 'Successfully joined the event', event });
-  } catch (error) {
-    console.error('Error joining event:', error);
-    res.status(500).json({ message: 'Server error', error: error.message });
-  }
-};
-
 module.exports = {
   createEvent,
   getEvent,
   editEvent,
-  deleteEvent,
-  joinEvent
+  deleteEvent
 };
