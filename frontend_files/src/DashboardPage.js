@@ -154,7 +154,7 @@ function DashboardPage() {
     <div className="dashboard-shell">
       <header className="dashboard-header">
         <div className="header-content">
-          <h1>SplitSeezs</h1>
+          <h1>SplitSeez</h1>
           <div className="header-right">
             <span className="welcome-text">Welcome {userName}!</span>
             <button className="logout-btn" onClick={handleLogout}>

@@ -1,5 +1,7 @@
 const Event = require('../models/event');
 const User = require('../models/user');
+const Receipt = require('../models/receipt');
+
 
 // Helper function to validate date
 const isValidDate = (dateString) => {
@@ -171,20 +173,28 @@ const deleteEvent = async (req, res) => {
       return res.status(403).json({ message: 'You are not authorized to delete this event' });
     }
 
+    // Delete attached receipt if it exists
+    if (event.receipt) {
+      await Receipt.findByIdAndDelete(event.receipt);
+    }
+
+    // Delete the event
     await Event.findByIdAndDelete(id);
 
+    // Update creator and participants
     await User.findByIdAndUpdate(user._id, { $pull: { createdEvents: id } });
     await User.updateMany(
       { participatingEvents: id },
       { $pull: { participatingEvents: id } }
     );
 
-    res.status(200).json({ message: 'Event deleted successfully' });
+    res.status(200).json({ message: 'Event and attached receipt deleted successfully' });
   } catch (error) {
     console.error('Error deleting event:', error);
     res.status(500).json({ message: 'Server error', error: error.message });
   }
 };
+
 
 module.exports = {
   createEvent,

@@ -37,7 +37,7 @@ function LoginPage() {
   return (
     <div className='login-container'>
       <div className='login-header'>
-        <h1>SplitSeezs</h1>
+        <h1>SplitSeez</h1>
       </div>
       <div className='login-box'>
         <h2>Welcome Back</h2>
