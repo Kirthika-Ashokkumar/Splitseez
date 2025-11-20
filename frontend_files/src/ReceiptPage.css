@@ -448,3 +448,64 @@
     flex-direction: column;
   }
 }
+
+/* OCR Processing Indicator */
+.receipt-container .processing-indicator {
+  background: linear-gradient(135deg, rgba(102, 126, 234, 0.1) 0%, rgba(118, 75, 162, 0.1) 100%);
+  border: 2px solid rgba(102, 126, 234, 0.3);
+  border-radius: 8px;
+  padding: 1rem;
+  margin-top: 1rem;
+  text-align: center;
+}
+
+.receipt-container .processing-indicator p {
+  color: #667eea;
+  font-weight: 600;
+  margin: 0;
+  animation: pulse 1.5s ease-in-out infinite;
+}
+
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.6; }
+}
+
+/* Extracted Text Display */
+.receipt-container .extracted-text-box {
+  background: #f8f9fa;
+  border: 2px solid #667eea;
+  border-radius: 8px;
+  padding: 1rem;
+  margin-top: 1rem;
+}
+
+.receipt-container .extracted-text-box h4 {
+  color: #667eea;
+  margin-bottom: 0.75rem;
+  font-size: 1rem;
+  font-weight: 600;
+}
+
+.receipt-container .extracted-text-content {
+  background: white;
+  border: 1px solid #ddd;
+  border-radius: 6px;
+  padding: 0.75rem;
+  max-height: 200px;
+  overflow-y: auto;
+  font-family: 'Courier New', monospace;
+  font-size: 0.85rem;
+  line-height: 1.5;
+  color: #333;
+  white-space: pre-wrap;
+  word-wrap: break-word;
+}
+
+.receipt-container .text-helper {
+  margin-top: 0.75rem;
+  color: #28a745;
+  font-size: 0.85rem;
+  font-weight: 500;
+  margin-bottom: 0;
+}
