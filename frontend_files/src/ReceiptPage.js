@@ -1,6 +1,7 @@
 import "./ReceiptPage.css";
 import React, { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
+import Tesseract from 'tesseract.js';
 
 const API_BASE = "http://localhost:4000/Splitseez";
 
@@ -8,6 +9,9 @@ function ReceiptPage() {
   const navigate = useNavigate();
 
   const [receiptFile, setReceiptFile] = useState(null);
+  const [isProcessing, setIsProcessing] = useState(false);
+  const [extractedText, setExtractedText] = useState("");
+  const [showExtractedData, setShowExtractedData] = useState(false);
   const [tax, setTax] = useState("");
   const [tip, setTip] = useState("");
   const [amount, setAmount] = useState("");
@@ -145,10 +149,182 @@ function ReceiptPage() {
     }
   };
 
+  /*
   const handleReceiptChange = (e) => {
     const file = e.target.files?.[0];
     setReceiptFile(file || null);
   };
+  */
+  
+const handleReceiptChange = async (e) => {
+  const file = e.target.files?.[0];
+  if (!file) {
+    setReceiptFile(null);
+    return;
+  }
+  
+  setReceiptFile(file);
+  setIsProcessing(true);
+  setExtractedText("");
+  setShowExtractedData(false);
+
+  try {
+    // Run OCR on the image
+    const result = await Tesseract.recognize(
+      file,
+      'eng',
+      {
+        logger: (m) => {
+          // You can see progress in console
+          if (m.status === 'recognizing text') {
+            console.log(`Progress: ${(m.progress * 100).toFixed(0)}%`);
+          }
+        }
+      }
+    );
+
+    const text = result.data.text;
+    setExtractedText(text);
+    
+    // Try to auto-fill fields from the extracted text
+    parseReceiptText(text);
+    
+    setShowExtractedData(true);
+  } catch (error) {
+    console.error('OCR Error:', error);
+    alert('Failed to read receipt. Please enter values manually.');
+  } finally {
+    setIsProcessing(false);
+  }
+};
+
+  ///Text Parsing
+  const parseReceiptText = (text) => {
+  const lines = text.split('\n').filter(line => line.trim().length > 0);
+  
+  const lowerText = text.toLowerCase();
+  
+  let foundTax = null;
+  let foundTip = null;
+  let foundTotal = null;
+  let itemLines = [];
+  
+  // Keywords to exclude (these aren't items)
+  const excludeKeywords = ['tax', 'tip', 'total', 'subtotal', 'change', 'cash', 'credit', 'debit', 'visa', 'mastercard', 'amex', 'balance', 'payment'];
+  
+  // Process each line
+  lines.forEach((line) => {
+    const lowerLine = line.toLowerCase();
+    
+    // Check for tax (more flexible patterns)
+    if (lowerLine.includes('tax')) {
+      const taxMatch = line.match(/\$?(\d+\.\d{2})/);
+      if (taxMatch && !foundTax) {
+        foundTax = taxMatch[1];
+      }
+    }
+    
+    // Check for tip (more flexible patterns)
+    if (lowerLine.includes('tip')) {
+      const tipMatch = line.match(/\$?(\d+\.\d{2})/);
+      if (tipMatch && !foundTip) {
+        foundTip = tipMatch[1];
+      }
+    }
+    
+    // Check for total (more flexible patterns)
+    if (lowerLine.includes('total') && !lowerLine.includes('subtotal')) {
+      const totalMatch = line.match(/\$?(\d+\.\d{2})/);
+      if (totalMatch) {
+        foundTotal = totalMatch[1];
+      }
+    }
+    
+    // Find all prices in the line
+    const priceMatches = line.match(/\$?\d+\.\d{2}/g);
+    
+    if (priceMatches && priceMatches.length > 0) {
+      // Check if this line should be excluded
+      const shouldExclude = excludeKeywords.some(keyword => lowerLine.includes(keyword));
+      
+      if (!shouldExclude) {
+        // Get the last price on the line (usually the item price)
+        const price = priceMatches[priceMatches.length - 1].replace('$', '');
+        
+        // Extract item name (everything before the last price)
+        let itemName = line;
+        
+        // Remove the price from the name
+        const lastPriceIndex = line.lastIndexOf(priceMatches[priceMatches.length - 1]);
+        if (lastPriceIndex !== -1) {
+          itemName = line.substring(0, lastPriceIndex).trim();
+        }
+        
+        // Remove any quantity indicators (like "2x", "3 x", etc.)
+        itemName = itemName.replace(/^\d+\s*x\s*/i, '').trim();
+        
+        // Remove leading numbers and special characters
+        itemName = itemName.replace(/^[\d\s\-\*\.#]+/, '').trim();
+        
+        // Only add if we have a reasonable item name
+        if (itemName.length > 1 && /[a-zA-Z]/.test(itemName) && parseFloat(price) > 0) {
+          itemLines.push({
+            name: itemName,
+            amount: price
+          });
+        }
+      }
+    }
+  });
+  
+  // Remove duplicate items (sometimes OCR reads the same line twice)
+  const uniqueItems = [];
+  const seenItems = new Set();
+  
+  itemLines.forEach(item => {
+    const key = `${item.name.toLowerCase()}-${item.amount}`;
+    if (!seenItems.has(key)) {
+      seenItems.add(key);
+      uniqueItems.push(item);
+    }
+  });
+  
+  // Set tax and tip
+  if (foundTax) setTax(foundTax);
+  if (foundTip) setTip(foundTip);
+  if (foundTotal) setAmount(foundTotal);
+  
+  // If we found items, switch to itemized mode
+  if (uniqueItems.length > 0) {
+    setSplitType('item');
+    
+    const formattedItems = uniqueItems.map(item => ({
+      name: item.name,
+      amount: item.amount,
+      sharedBy: []
+    }));
+    
+    setItems(formattedItems);
+    
+    console.log(`Found ${uniqueItems.length} items on the receipt!`);
+    console.log('Items:', uniqueItems); // So you can see what was extracted
+  } else {
+    console.log('No line items detected. Staying in equal split mode.');
+    
+    if (!foundTotal) {
+      const amountRegex = /\$?\d+\.\d{2}/g;
+      const amounts = text.match(amountRegex) || [];
+      const cleanAmounts = amounts.map(a => a.replace('$', ''));
+      
+      if (cleanAmounts.length > 0) {
+        const largest = cleanAmounts.reduce((max, curr) => 
+          parseFloat(curr) > parseFloat(max) ? curr : max
+        );
+        setAmount(largest);
+      }
+    }
+  }
+};
 
   // Itemized logic
   const handleAddItem = () => setItems((prev) => [...prev, { name: "", amount: "", sharedBy: [] }]);
@@ -318,10 +494,33 @@ function ReceiptPage() {
           <input type="text" id="amount" placeholder="0.00" value={amount} onChange={(e) => setAmount(handleNumberInput(e.target.value))} />
           <small>If left empty, total = items + tax + tip.</small>
         </div>
+        
         <div className="form-group">
-          <label>Receipt Image (optional):</label>
-          <input type="file" accept="image/*" onChange={handleReceiptChange} />
-        </div>
+  <label>Receipt Image (optional):</label>
+  <input 
+    type="file" 
+    accept="image/*" 
+    onChange={handleReceiptChange}
+    disabled={isProcessing}
+  />
+  {isProcessing && (
+    <div className="processing-indicator">
+      <p>🔄 Processing receipt image... This may take 10-30 seconds.</p>
+    </div>
+  )}
+  {showExtractedData && extractedText && (
+    <div className="extracted-text-box">
+      <h4>📄 Extracted Text from Receipt:</h4>
+      <div className="extracted-text-content">
+        {extractedText}
+      </div>
+      <p className="text-helper">
+        ✓ Fields above have been auto-filled. Please review and adjust if needed!
+      </p>
+    </div>
+  )}
+</div>
+        
         <div className="form-group">
           <label htmlFor="tax">Tax (optional):</label>
           <input type="text" id="tax" placeholder="0.00" value={tax} onChange={(e) => setTax(handleNumberInput(e.target.value))} />

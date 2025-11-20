@@ -1,4 +1,4 @@
 api/node_modules
 api/.env
 frontend_files/node_modules
-
+node_modules
