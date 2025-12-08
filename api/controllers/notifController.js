@@ -1,8 +1,14 @@
 const asyncHandler = require('express-async-handler');
 const Notification = require('../models/notification');
-
 const getNotifications = asyncHandler(async (req, res) => {
   const { userId } = req.params;
+  
+  // ADD THIS VALIDATION
+  if (!userId || userId === 'undefined') {
+    res.status(400);
+    throw new Error('User ID is required and must be valid');
+  }
+  
   const { unreadOnly } = req.query;
   
   // Build query

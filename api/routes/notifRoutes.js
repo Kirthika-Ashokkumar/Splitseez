@@ -12,28 +12,30 @@ const {
   getUnreadCount
 } = require('../controllers/notifController');
 
-// Get all notifications for a user (with optional unreadOnly query param)
-router.get('/notifications/:userId', verifyToken, getNotifications);
-
-// Get unread notification count
-router.get('/notifications/:userId/unread-count', verifyToken, getUnreadCount);
-
-// Get single notification by ID
-router.get('/notifications/detail/:id', verifyToken, getNotification);
+// IMPORTANT: Specific routes MUST come BEFORE generic /:param routes
 
 // Create a new notification
 router.post('/notifications', verifyToken, createNotification);
 
-// Mark a notification as read
-router.put('/notifications/:id/read', verifyToken, markAsRead);
+// Get single notification by ID (put specific paths first)
+router.get('/notifications/detail/:id', verifyToken, getNotification);
+
+// Get unread notification count (specific path before generic :userId)
+router.get('/notifications/:userId/unread-count', verifyToken, getUnreadCount);
 
 // Mark all notifications as read for a user
 router.put('/notifications/:userId/read-all', verifyToken, markAllAsRead);
 
+// Delete all notifications for a user
+router.delete('/notifications/:userId/all', verifyToken, deleteAllNotifications);
+
+// Mark a notification as read
+router.put('/notifications/:id/read', verifyToken, markAsRead);
+
 // Delete a single notification
 router.delete('/notifications/:id', verifyToken, deleteNotification);
 
-// Delete all notifications for a user
-router.delete('/notifications/:userId/all', verifyToken, deleteAllNotifications);
+// Get all notifications for a user (this should be LAST because it's most generic)
+router.get('/notifications/:userId', verifyToken, getNotifications);
 
 module.exports = router;

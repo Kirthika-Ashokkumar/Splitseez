@@ -64,7 +64,8 @@ const signIn = async (req, res) => {
 
     return res.status(200).json({
       message: 'Sign-in successful',
-      user: {name: user.name, email: user.email},
+      
+      user: {_id: user._id, name: user.name, email: user.email},
       token,
     });
   } catch (err) {

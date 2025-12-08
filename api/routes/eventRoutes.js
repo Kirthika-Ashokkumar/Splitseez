@@ -11,7 +11,6 @@ const {
 } = require('../controllers/eventController');
 
 router.post('/Event', verifyToken, createEvent);
-
 router.get('/Event/:id', verifyToken, getEvent);
 router.put('/Event/:id', verifyToken, editEvent);
 router.delete('/Event/:id', verifyToken, deleteEvent);
