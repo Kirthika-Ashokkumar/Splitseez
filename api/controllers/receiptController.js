@@ -1,10 +1,7 @@
 const Receipt = require('../models/receipt');
 const Event = require('../models/event');
 
-/**
- * calculateSplit
- * Adds `paid: false` to each owed entry
- */
+
 function calculateSplit(receipt) {
   const tax = Number(receipt.tax || 0);
   const tip = Number(receipt.tip || 0);
@@ -48,9 +45,7 @@ function calculateSplit(receipt) {
   return results;
 }
 
-/**
- * uploadReceipt
- */
+
 const uploadReceipt = async (req, res) => {
   try {
     const { eventId, tax = 0, tip = 0, items = [], split_type = 'equal', split_details = [], total } = req.body;
@@ -77,10 +72,7 @@ const uploadReceipt = async (req, res) => {
   }
 };
 
-/**
- * markPaid
- * Update a user's payment status for a receipt
- */
+
 const markPaid = async (req, res) => {
   try {
     const { receiptId } = req.params;
@@ -104,9 +96,7 @@ const markPaid = async (req, res) => {
   }
 };
 
-/**
- * updateReceipt
- */
+
 const updateReceipt = async (req, res) => {
   try {
     const {receiptId} = req.params;
@@ -139,9 +129,6 @@ const updateReceipt = async (req, res) => {
   }
 };
 
-/**
- * deleteReceipt
- */
 const deleteReceipt = async (req, res) => {
   try {
     const {receiptId} = req.params;
@@ -161,11 +148,7 @@ const deleteReceipt = async (req, res) => {
   }
 };
 
-/**
- * getReceipt
- * Fetch a single receipt by ID for editing
- * Populates event date and user names only
- */
+
 const getReceipt = async (req, res) => {
   try {
     const {receiptId} = req.params;
@@ -188,11 +171,7 @@ const getReceipt = async (req, res) => {
   }
 };
 
-/**
- * getOwedList
- * Fetch only the owed amounts for a receipt
- * Populates user name for each entry in owed
- */
+
 const getOwedList = async (req, res) => {
   try {
     const {receiptId} = req.params;

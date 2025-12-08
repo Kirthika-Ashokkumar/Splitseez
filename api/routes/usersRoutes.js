@@ -8,7 +8,8 @@ const {
   getUserFromToken,
   getCreatedEvents,
   getParticipatingEvents,
-  validateUsersByEmails
+  validateUsersByEmails,
+  getUserByEmail
 } = require("../controllers/usersController");
 
 // Sign Up (no auth needed)
@@ -25,5 +26,8 @@ router.get("/Users/CreatedEvents", verifyToken, getCreatedEvents);
 router.get("/Users/ParticipatingEvents", verifyToken, getParticipatingEvents);
 // Validate users by emails (needs auth)
 router.post("/Users/ValidateEmails", verifyToken, validateUsersByEmails);
+// Get user by email
+router.get('/Users/email/:email', verifyToken, getUserByEmail);
+
 
 module.exports = router;

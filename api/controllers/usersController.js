@@ -180,6 +180,30 @@ const validateUsersByEmails = async (req, res) => {
   }
 };
 
+const getUserByEmail = async (req, res) => {
+  const { email } = req.params;
+  
+  if (!email) {
+    res.status(400);
+    throw new Error('Email parameter is required');
+  }
+
+  const user = await User.findOne({ email: email.toLowerCase() });
+  
+  if (!user) {
+    res.status(404);
+    throw new Error('User not found with that email');
+  }
+
+  // Return user without sensitive information
+  res.status(200).json({
+    _id: user._id,
+    name: user.name,
+    email: user.email,
+    createdAt: user.createdAt
+  });
+};
+
 module.exports = {
   signUp,
   signIn,
@@ -187,5 +211,6 @@ module.exports = {
   getUserFromToken,
   getCreatedEvents,
   getParticipatingEvents,
-  validateUsersByEmails
+  validateUsersByEmails,
+  getUserByEmail
 };

@@ -12,6 +12,30 @@ function DashboardPage() {
   const [loading, setLoading] = useState(true);
   const [userName, setUserName] = useState('');
   const [userId, setUserId] = useState('');
+  const [unreadCount, setUnreadCount] = useState(0);
+
+  const fetchUnreadCount = useCallback(async () => {
+    const token = localStorage.getItem('token');
+    const userStr = localStorage.getItem('user');
+
+    if (!token || !userStr) return;
+
+    const user = JSON.parse(userStr);
+    const id = user._id || user.id;
+
+    try {
+      const res = await fetch(`${API_BASE}/notifications/${id}/unread-count`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+
+      if (res.ok) {
+        const data = await res.json();
+        setUnreadCount(data.count || 0);
+      }
+    } catch (err) {
+      console.error('Error fetching unread count:', err);
+    }
+  }, []);
 
   const fetchUserData = useCallback(async () => {
     const token = localStorage.getItem('token');
@@ -77,7 +101,12 @@ function DashboardPage() {
 
   useEffect(() => {
     fetchUserData();
-  }, [fetchUserData]);
+    fetchUnreadCount();
+
+    // Poll for unread count every 30 seconds
+    const interval = setInterval(fetchUnreadCount, 30000);
+    return () => clearInterval(interval);
+  }, [fetchUserData, fetchUnreadCount]);
 
   const handleEditEvent = (id) => {
     localStorage.setItem('editingEventId', id);
@@ -156,6 +185,16 @@ function DashboardPage() {
         <div className="header-content">
           <h1>SplitSeez</h1>
           <div className="header-right">
+            <button 
+              className="notification-bell" 
+              onClick={() => navigate('/notifications')}
+              title="Notifications"
+            >
+              🔔
+              {unreadCount > 0 && (
+                <span className="notification-badge">{unreadCount}</span>
+              )}
+            </button>
             <span className="welcome-text">Welcome {userName}!</span>
             <button className="logout-btn" onClick={handleLogout}>
               Logout
